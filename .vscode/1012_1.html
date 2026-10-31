@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>網頁版線性規劃計算器</title>
+    <!-- 使用穩定且支援瀏覽器的 jsDelivr CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/javascript-lp-solver/prod/solver.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; max-width: 900px; margin: auto; }
+        .btn-ctrl { padding: 4px 10px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        .input-num { width: 55px; text-align: right; padding: 4px; }
+        .row-item { margin-bottom: 12px; }
+        .btn-action { padding: 6px 12px; font-size: 14px; cursor: pointer; background: #2563eb; color: white; border: none; border-radius: 4px; }
+        .btn-delete { color: #dc2626; cursor: pointer; background: none; border: none; font-weight: bold; margin-left: 8px; }
+        .btn-solve { padding: 12px 28px; font-size: 18px; cursor: pointer; background: #000000; color: white; border: none; border-radius: 4px; font-weight: bold; width: 100%; margin-top: 15px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 15px; }
+        th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: center; }
+        th { background-color: #f1f5f9; }
+    </style>
+</head>
+<body>
+    <h1>網頁版線性規劃計算器</h1>
+    <hr>
+
+    <h3>第一步：選擇一個問題類型</h3>
+    <select id="opType">
+        <option value="max">最大化 (max)</option>
+        <option value="min">最小化 (min)</option>
+    </select>
+
+    <div style="margin-top: 15px;">
+        <strong>設定決策變數數量：</strong>
+        <button type="button" class="btn-ctrl" onclick="changeVarCount(-1)">－</button>
+        <span id="varCountText" style="font-size: 18px; font-weight: bold; margin: 0 8px;">2</span>
+        <button type="button" class="btn-ctrl" onclick="changeVarCount(1)">＋</button>
+    </div>
+
+    <!-- 第二步：動態生成的目標函數 -->
+    <h3>第二步：目標函數 (可自行修改係數)</h3>
+    <div id="objContainer" class="row-item"></div>
+
+    <!-- 第三步：限制式 -->
+    <h3>第三步：限制式</h3>
+    <div id="constraintsContainer"></div>
+    <button type="button" class="btn-action" onclick="addConstraint()">＋ 新增限制式</button>
+
+    <button onclick="calculate()" class="btn-solve">開始求解 (Solve)</button>
+
+    <hr style="margin-top: 25px;">
+    <h3>求解結果：</h3>
+    <div id="output" style="font-size: 18px; color: #16a34a; font-weight: bold;">
+        請點擊「開始求解」按鈕
+    </div>
+
+    <script>
+    var varCount = 2;
+    var objValues = [20, 15];
+    var conData = [
+        { coeffs: [2, 1], op: "<=", rhs: 20 },
+        { coeffs: [1, 3], op: "<=", rhs: 35 }
+    ];
+
+    function renderObjective() {
+        var container = document.getElementById("objContainer");
+        var html = "<strong>Z = </strong>";
+
+        for (var i = 1; i <= varCount; i++) {
+            var val = (objValues[i - 1] !== undefined) ? objValues[i - 1] : 0;
+            html += '<input id="c' + i + '" type="number" class="input-num" value="' + val + '" onchange="objValues[' + (i - 1) + '] = parseFloat(this.value) || 0"> X' + i;
+            if (i < varCount) html += " + ";
+        }
+        container.innerHTML = html;
+    }
+
+    function renderConstraints() {
+        var container = document.getElementById("constraintsContainer");
+        container.innerHTML = "";
+
+        for (var r = 0; r < conData.length; r++) {
+            var row = conData[r];
+            while (row.coeffs.length < varCount) row.coeffs.push(0);
+
+            var p = document.createElement("p");
+            var html = "限制式 " + (r + 1) + "： ";
+
+            for (var c = 1; c <= varCount; c++) {
+                var cVal = (row.coeffs[c - 1] !== undefined) ? row.coeffs[c - 1] : 0;
+                html += '<input type="number" class="input-num" value="' + cVal + '" onchange="conData[' + r + '].coeffs[' + (c - 1) + '] = parseFloat(this.value) || 0"> X' + c;
+                if (c < varCount) html += " + ";
+            }
+
+            html += ' <select onchange="conData[' + r + '].op = this.value">' +
+                    '<option value="<="' + (row.op === "<=" ? " selected" : "") + ">&le;</option>' +
+                    '<option value=">="' + (row.op === ">=" ? " selected" : "") + ">&ge;</option>' +
+                    '<option value="="' + (row.op === "=" ? " selected" : "") + ">=</option>' +
+                    '</select> ';
+
+            html += '<input type="number" class="input-num" value="' + row.rhs + '" onchange="conData[' + r + '].rhs = parseFloat(this.value) || 0">';
+            
+            if (conData.length > 1) {
+                html += ' <button type="button" class="btn-delete" onclick="deleteConstraint(' + r + ')">刪除</button>';
+            }
+
+            p.innerHTML = html;
+            container.appendChild(p);
+        }
+    }
+
+    function changeVarCount(delta) {
+        var newCount = varCount + delta;
+        if (newCount < 1) {
+            alert("決策變數至少需要 1 個！");
+            return;
+        }
+        varCount = newCount;
+        document.getElementById("varCountText").innerText = varCount;
+        renderObjective();
+        renderConstraints();
+    }
+
+    function addConstraint() {
+        conData.push({ coeffs: new Array(varCount).fill(0), op: "<=", rhs: 0 });
+        renderConstraints();
+    }
+
+    function deleteConstraint(index) {
+        conData.splice(index, 1);
+        renderConstraints();
+    }
+
+    function calculate() {
+        if (typeof solver === "undefined") {
+            alert("求解器套件載入中或被擋，請確認網路連線。");
+            return;
+        }
+
+        var opType = document.getElementById("opType").value;
+
+        // 1. 建立 lp-solver 模型格式
+        var model = {
+            optimize: "target",
+            opType: opType,
+            constraints: {},
+            variables: {}
+        };
+
+        // 填入限制式
+        for (var r = 0; r < conData.length; r++) {
+            var cKey = "con_" + r;
+            model.constraints[cKey] = {};
+            if (conData[r].op === "<=") model.constraints[cKey].max = conData[r].rhs;
+            else if (conData[r].op === ">=") model.constraints[cKey].min = conData[r].rhs;
+            else if (conData[r].op === "=") model.constraints[cKey].equal = conData[r].rhs;
+        }
+
+        // 填入決策變數係數
+        for (var i = 1; i <= varCount; i++) {
+            var vKey = "X" + i;
+            var targetVal = parseFloat(document.getElementById("c" + i).value) || 0;
+            model.variables[vKey] = { target: targetVal };
+
+            for (var r = 0; r < conData.length; r++) {
+                model.variables[vKey]["con_" + r] = conData[r].coeffs[i - 1] || 0;
+            }
+        }
+
+        // 2. 呼叫求解器求解
+        var results = solver.Solve(model);
+
+        if (!results.feasible) {
+            document.getElementById("output").innerHTML = "<span style='color:red;'>此問題無可行解 (Infeasible)！</span>";
+            return;
+        }
+        if (results.bounded === false) {
+            document.getElementById("output").innerHTML = "<span style='color:red;'>此問題為無界解 (Unbounded)！</span>";
+            return;
+        }
+
+        // 3. 輸出最佳解
+        var varText = "";
+        for (var i = 1; i <= varCount; i++) {
+            var val = results["X" + i] || 0;
+            varText += "<strong>X" + i + "*</strong> = " + (Math.round(val * 100) / 100) + " ";
+        }
+
+        var outputHtml = "<p><strong>最佳目標函數值 Z* = </strong> <span style='font-size: 22px; color: #15803d;'>" + (Math.round(results.result * 100) / 100) + "</span></p>" +
+                         "<p><strong>決策變數最佳解：</strong> " + varText + "</p>";
+
+        // 4. 限制式狀態分析表格
+        outputHtml += "<h4 style='color: #000; margin-top: 15px;'>限制式狀態分析：</h4>" +
+                      "<table><tr><th>限制式</th><th>左側值 (LHS)</th><th>符號</th><th>右側值 (RHS)</th><th>狀態</th><th>鬆弛量 (Slack)</th></tr>";
+
+        for (var r = 0; r < conData.length; r++) {
+            var lhs = 0;
+            for (var i = 1; i <= varCount; i++) {
+                lhs += (conData[r].coeffs[i - 1] || 0) * (results["X" + i] || 0);
+            }
+            var rhs = conData[r].rhs;
+            var diff = Math.abs(lhs - rhs);
+            var isBinding = diff < 1e-4;
+            var slack = conData[r].op === "<=" ? Math.max(0, rhs - lhs) : Math.max(0, lhs - rhs);
+
+            outputHtml += "<tr>" +
+                "<td>限制式 #" + (r + 1) + "</td>" +
+                "<td>" + (Math.round(lhs * 100) / 100) + "</td>" +
+                "<td>" + conData[r].op + "</td>" +
+                "<td>" + rhs + "</td>" +
+                "<td style='color: " + (isBinding ? "#dc2626" : "#64748b") + "; font-weight: bold;'>" + (isBinding ? "Binding (等號成立)" : "Nonbinding") + "</td>" +
+                "<td>" + (Math.round(slack * 100) / 100) + "</td>" +
+            "</tr>";
+        }
+        outputHtml += "</table>";
+
+        document.getElementById("output").innerHTML = outputHtml;
+    }
+
+    // 初次載入渲染
+    renderObjective();
+    renderConstraints();
+    </script>
+</body>
+</html>

@@ -1,0 +1,3010 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>網頁版線性規劃計算器 (Web-based Linear Programming Calculator)</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .font-mono-math {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Toast Notification -->
+  <div id="app-toast" class="fixed bottom-5 right-5 z-50 hidden max-w-sm px-4 py-3 rounded-xl shadow-lg border text-xs font-medium transition-all duration-200"></div>
+
+  <!-- Header / Navigation Bar -->
+  <header class="bg-gradient-to-r from-blue-700 via-indigo-700 to-indigo-800 text-white shadow-lg sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur border border-white/20 flex items-center justify-center font-bold text-xl shadow-inner">
+          ∑
+        </div>
+        <div>
+          <h1 class="text-lg sm:text-xl font-bold tracking-tight">網頁版線性規劃計算器</h1>
+          <p class="text-xs text-blue-200">Web-based Linear Programming Calculator · 管理數學決策支援系統</p>
+        </div>
+      </div>
+      
+      <!-- Mode Tabs -->
+      <nav class="flex items-center bg-blue-900/40 p-1 rounded-xl border border-white/10 text-xs sm:text-sm font-medium">
+        <button id="tab-btn-general" type="button" class="px-3.5 py-1.5 rounded-lg transition-all duration-150 bg-white text-blue-900 font-semibold shadow-sm">
+          通用線性規劃
+        </button>
+        <button id="tab-btn-transport" type="button" class="px-3.5 py-1.5 rounded-lg transition-all duration-150 text-blue-100 hover:text-white hover:bg-white/10">
+          運輸問題範本
+        </button>
+        <button id="tab-btn-assignment" type="button" class="px-3.5 py-1.5 rounded-lg transition-all duration-150 text-blue-100 hover:text-white hover:bg-white/10">
+          指派問題範本
+        </button>
+        <button id="tab-btn-ai" type="button" class="px-3.5 py-1.5 rounded-lg transition-all duration-150 text-blue-100 hover:text-white hover:bg-white/10">
+          AI / 案例庫
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- ========================================== -->
+    <!-- SECTION 1: 通用線性規劃計算器 (General LP) -->
+    <!-- ========================================== -->
+    <section id="section-general" class="space-y-6">
+      
+      <!-- Top Action Bar / Quick Load Examples -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2 text-sm text-slate-600 font-medium">
+          <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold">★</span>
+          <span>快速載入教學案例：</span>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button id="btn-load-ex1" type="button" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 transition">
+            📘 講義例題 (2變數2限制式)
+          </button>
+          <button id="btn-load-ex2" type="button" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 transition">
+            🏭 生產資源最佳化 (3限制式)
+          </button>
+          <button id="btn-load-ex3" type="button" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-700 border border-slate-200 transition">
+            💼 0-1 專案投資選擇 (二元規劃)
+          </button>
+          <button id="btn-reset-general" type="button" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 transition">
+            ↺ 清空重設
+          </button>
+        </div>
+      </div>
+
+      <!-- Grid: Left Input / Model Specification | Right Results & Visualization -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Column: Input Form (5 cols on lg) -->
+        <div class="lg:col-span-5 space-y-6">
+
+          <!-- Card 1: 問題類型與非負限制 -->
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+            <h2 class="text-base font-semibold text-slate-900 flex items-center justify-between">
+              <span>1. 問題目標與基本設定</span>
+              <span class="text-xs font-normal text-slate-500">基本功能 1, 5</span>
+            </h2>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1.5">目標類型 (Objective)</label>
+                <div class="grid grid-cols-2 p-1 bg-slate-100 rounded-xl border border-slate-200 text-xs font-semibold">
+                  <button id="btn-opt-max" type="button" class="py-1.5 rounded-lg bg-blue-600 text-white shadow-sm transition">
+                    Max (最大化)
+                  </button>
+                  <button id="btn-opt-min" type="button" class="py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition">
+                    Min (最小化)
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-xs font-medium text-slate-600 mb-1.5">變數非負限制 (Sign)</label>
+                <label class="flex items-center h-[38px] px-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-100/70 transition">
+                  <input id="chk-non-negative" type="checkbox" checked class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+                  <span class="ml-2 text-xs font-medium text-slate-700">自動建立 <i>x<sub>i</sub></i> ≥ 0</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: 決策變數設定 -->
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-base font-semibold text-slate-900">2. 決策變數設定</h2>
+                <p class="text-xs text-slate-500">可自訂變數名稱、目標係數與數值型態 (連續 / 整數 / 0-1)</p>
+              </div>
+              <button id="btn-add-var" type="button" class="inline-flex items-center px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-semibold transition border border-blue-200">
+                + 新增變數
+              </button>
+            </div>
+
+            <div id="variables-container" class="space-y-2.5">
+              <!-- Dynamically rendered variable rows -->
+            </div>
+          </div>
+
+          <!-- Card 3: 限制式設定 -->
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-base font-semibold text-slate-900">3. 限制式設定 (Constraints)</h2>
+                <p class="text-xs text-slate-500">支援 ≤, =, ≥ 與右側常數 (RHS)</p>
+              </div>
+              <button id="btn-add-constraint" type="button" class="inline-flex items-center px-2.5 py-1.5 rounded-lg bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-semibold transition border border-blue-200">
+                + 新增限制式
+              </button>
+            </div>
+
+            <div id="constraints-container" class="space-y-3">
+              <!-- Dynamically rendered constraint rows -->
+            </div>
+          </div>
+
+          <!-- Card 4: 完整數學模型即時預覽 -->
+          <div class="bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-2xl p-5 shadow-sm space-y-3">
+            <div class="flex items-center justify-between text-xs text-slate-400">
+              <span class="font-medium flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                即時數學模式預覽 (Mathematical Model)
+              </span>
+              <span>LP Formulation</span>
+            </div>
+            <div id="math-model-preview" class="p-3.5 bg-black/30 rounded-xl border border-white/10 font-mono-math text-xs sm:text-sm text-indigo-100 leading-relaxed overflow-x-auto whitespace-pre">
+              <!-- Rendered math formula -->
+            </div>
+          </div>
+
+          <!-- Action Solve Button -->
+          <button id="btn-solve-general" type="button" class="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            <span>立即求解最佳解 (Solve LP)</span>
+          </button>
+        </div>
+
+        <!-- Right Column: Results, Management Insights, Graphical Analysis (7 cols on lg) -->
+        <div class="lg:col-span-7 space-y-6">
+
+          <!-- Solution Status & Optimal Value Card -->
+          <div id="card-solution-summary" class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                <span>求解結果與最佳解 (Optimal Solution)</span>
+              </h2>
+              <span id="solution-status-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+                尚未求解
+              </span>
+            </div>
+
+            <!-- Value Callouts -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div class="p-4 bg-gradient-to-br from-blue-50 to-indigo-50/60 rounded-xl border border-blue-100">
+                <p class="text-xs font-semibold text-blue-800 uppercase tracking-wider">最佳目標函數值 (Z*)</p>
+                <p id="res-optimal-z" class="text-2xl sm:text-3xl font-extrabold text-blue-900 mt-1 font-mono-math">--</p>
+                <p id="res-optimal-type-note" class="text-xs text-blue-600 mt-0.5 font-medium">尚未執行求解運算</p>
+              </div>
+
+              <div class="p-4 bg-gradient-to-br from-slate-50 to-emerald-50/50 rounded-xl border border-slate-200/80">
+                <p class="text-xs font-semibold text-slate-700 uppercase tracking-wider">決策變數最佳取值 (x*)</p>
+                <div id="res-vars-list" class="mt-1 space-y-1 font-mono-math text-xs sm:text-sm text-slate-900">
+                  <span class="text-slate-400">點擊「立即求解」顯示結果</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 求解結果管理解讀 (Managerial Interpretation) -->
+            <div class="p-4 bg-amber-50/70 border border-amber-200/80 rounded-xl space-y-2">
+              <h3 class="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+                <span>💡 管理意涵解讀 (Managerial Interpretation)</span>
+              </h3>
+              <div id="res-management-narrative" class="text-xs sm:text-sm text-amber-950 leading-relaxed font-normal">
+                請輸入模型參數後點擊求解，系統將自動產生決策建議與管理意涵。
+              </div>
+            </div>
+          </div>
+
+          <!-- 限制式分析表 (Constraint Analysis) -->
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-base font-bold text-slate-900">限制式狀態分析 (Constraint Analysis)</h2>
+                <p class="text-xs text-slate-500">檢視左側值 (LHS)、右側值 (RHS)、鬆弛/剩餘量 (Slack/Surplus) 與緊束狀態</p>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold">
+                    <th class="py-2.5 px-3">限制式名稱</th>
+                    <th class="py-2.5 px-3">數學式</th>
+                    <th class="py-2.5 px-3 text-right">左側值 (LHS)</th>
+                    <th class="py-2.5 px-3 text-center">符號</th>
+                    <th class="py-2.5 px-3 text-right">右側值 (RHS)</th>
+                    <th class="py-2.5 px-3 text-right">鬆弛/剩餘 (Slack)</th>
+                    <th class="py-2.5 px-3 text-center">狀態 (Status)</th>
+                  </tr>
+                </thead>
+                <tbody id="table-constraints-analysis" class="divide-y divide-slate-100 font-mono-math">
+                  <tr>
+                    <td colspan="7" class="py-4 text-center text-slate-400 font-sans">無限制式分析資料</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 敏感度分析 (Sensitivity Analysis) -->
+          <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-base font-bold text-slate-900">敏感度分析 (Sensitivity Analysis)</h2>
+                <p class="text-xs text-slate-500">影子價格 (Shadow Price)、瓶頸資源判定與管理決策建議</p>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-200 bg-slate-50 text-slate-600 font-semibold">
+                    <th class="py-2.5 px-3">資源/限制式</th>
+                    <th class="py-2.5 px-3 text-right">影子價格 (Shadow Price)</th>
+                    <th class="py-2.5 px-3 text-right">鬆弛/剩餘量</th>
+                    <th class="py-2.5 px-3 text-center">資源屬性</th>
+                    <th class="py-2.5 px-3">管理決策說明</th>
+                  </tr>
+                </thead>
+                <tbody id="table-sensitivity-analysis" class="divide-y divide-slate-100 font-mono-math">
+                  <tr>
+                    <td colspan="5" class="py-4 text-center text-slate-400 font-sans">無敏感度分析資料</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- 2D 幾何圖形化分析 (Graphical Method Analysis) -->
+          <div id="card-graphical-analysis" class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <span>圖形化分析 (Graphical Method)</span>
+                  <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-100 text-indigo-700">2D 專屬</span>
+                </h2>
+                <p class="text-xs text-slate-500">繪製限制式邊界、可行區域 (Feasible Region)、最佳解位置與等利潤/等成本線</p>
+              </div>
+            </div>
+
+            <!-- Canvas Container -->
+            <div class="relative bg-slate-900/95 rounded-xl p-2 overflow-hidden border border-slate-800 shadow-inner flex flex-col items-center">
+              <canvas id="lp-canvas" width="600" height="420" class="max-w-full h-auto rounded"></canvas>
+              
+              <!-- Interactive Z Slider -->
+              <div class="w-full px-4 py-2.5 mt-2 bg-slate-800/80 rounded-lg border border-slate-700 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-300">
+                <div class="flex items-center gap-2">
+                  <span id="label-iso-title" class="font-semibold text-amber-400">動態等利潤線 (Iso-profit Line)：</span>
+                  <span id="label-slider-z" class="font-mono-math text-white font-bold">Z = --</span>
+                </div>
+                <div class="flex-1 max-w-xs flex items-center gap-2">
+                  <span id="slider-min-label" class="text-[10px] text-slate-400">0</span>
+                  <input id="slider-iso-z" type="range" min="0" max="100" step="any" value="0" class="w-full accent-amber-400 cursor-pointer">
+                  <span id="slider-max-label" class="text-[10px] text-slate-400">Z*</span>
+                </div>
+                <button id="btn-reset-slider-z" type="button" class="px-2 py-1 rounded bg-slate-700 hover:bg-slate-600 text-white text-[11px] font-medium transition">
+                  移至最佳解 Z*
+                </button>
+              </div>
+            </div>
+
+            <!-- Graph Legend -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-slate-600 pt-1">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded bg-blue-500/40 border border-blue-600"></span>
+                <span>可行解區域 (Feasible)</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-rose-500 border border-white shadow-sm"></span>
+                <span>最佳解 (Optimal Point)</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-1 border-t-2 border-dashed border-amber-400"></span>
+                <span>等目標值線 (Iso-Z)</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-1 bg-emerald-500"></span>
+                <span>限制式邊界線</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SECTION 2: 運輸問題範本 (Transportation)   -->
+    <!-- ========================================== -->
+    <section id="section-transport" class="space-y-6 hidden">
+      
+      <!-- Intro Card -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-2">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <span>🚚 管理科學模型範本：運輸問題 (Transportation Problem)</span>
+              <span class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-indigo-100 text-indigo-700">作業進階功能</span>
+            </h2>
+            <p class="text-xs text-slate-500">完整支援作業要求 Step 1 到 Step 8 規格：建立規模 → 輸入成本與供需 → 自動建構LP模型 → 求解最佳配銷方案與管理分析</p>
+          </div>
+          <div class="flex gap-2">
+            <button id="btn-load-trans-example" type="button" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition">
+              📘 載入講義 3×4 運輸範例 (第8頁)
+            </button>
+            <button id="btn-reset-trans" type="button" class="px-3 py-2 text-xs font-medium rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+              ↺ 清空重設
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 2: 建立問題規模 -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <span class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs">2</span>
+          <span>Step 2：建立問題規模 (供給地與需求地數量)</span>
+        </h3>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">供給地 (Sources) 數量</label>
+            <input id="trans-num-sources" type="number" min="1" max="10" value="3" class="w-full px-3 py-2 text-sm bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-500 font-mono-math">
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-600 mb-1">需求地 (Destinations) 數量</label>
+            <input id="trans-num-dests" type="number" min="1" max="10" value="4" class="w-full px-3 py-2 text-sm bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-500 font-mono-math">
+          </div>
+          <div>
+            <button id="btn-trans-resize" type="button" class="w-full py-2 px-3 text-xs font-bold rounded-xl bg-slate-800 hover:bg-slate-900 text-white transition">
+              更新表格規模
+            </button>
+          </div>
+          <div class="text-xs text-slate-500">
+            <span id="trans-balance-indicator" class="font-semibold text-emerald-600">供需平衡狀態：平衡</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: 輸入資料矩陣 -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+          <span class="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center text-xs">3</span>
+          <span>Step 3：輸入資料 (運輸成本矩陣、各供給地供應量、各需求地需求量)</span>
+        </h3>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-center text-xs border border-slate-200 rounded-xl overflow-hidden">
+            <thead id="trans-table-head" class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+              <!-- Rendered header -->
+            </thead>
+            <tbody id="trans-table-body" class="divide-y divide-slate-100">
+              <!-- Rendered grid -->
+            </tbody>
+            <tfoot id="trans-table-foot" class="bg-slate-50 font-semibold border-t border-slate-200">
+              <!-- Rendered demands -->
+            </tfoot>
+          </table>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-2">
+          <button id="btn-trans-build-model" type="button" class="px-5 py-2.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition flex items-center gap-1.5">
+            <span>⚙️ Step 4 & 5：自動建立線性規劃模型</span>
+          </button>
+          <button id="btn-trans-solve" type="button" class="px-6 py-2.5 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-md transition flex items-center gap-1.5">
+            <span>🚀 Step 6：呼叫求解器求解 (Solve)</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 4 & 5: 數學模型顯示 -->
+      <div id="trans-model-card" class="bg-slate-900 text-white rounded-2xl p-5 shadow-sm space-y-3">
+        <div class="flex items-center justify-between text-xs text-slate-400">
+          <span class="font-bold flex items-center gap-2 text-indigo-300">
+            <span>📐 Step 4 & 5：自動產生之線性規劃數學模型 (Formulated LP Model)</span>
+          </span>
+          <span class="font-mono text-[11px]">目標：最小化總運輸成本</span>
+        </div>
+        <div id="trans-math-preview" class="p-4 bg-black/40 rounded-xl font-mono-math text-xs leading-relaxed text-indigo-100 overflow-x-auto whitespace-pre">
+          請點擊「自動建立線性規劃模型」以檢視完整數學方程式。
+        </div>
+      </div>
+
+      <!-- Step 7 & 8: 結果呈現與結果分析 -->
+      <div id="trans-results-container" class="space-y-6">
+
+        <!-- Step 7: 最佳配銷表格與總成本 -->
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs">7</span>
+              <span>Step 7：最佳運輸方案呈現 (Optimal Shipment Schedule)</span>
+            </h3>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-slate-500">最小總運輸成本 (Z*)：</span>
+              <span id="trans-total-cost" class="text-xl font-extrabold text-blue-700 font-mono-math">--</span>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr class="bg-slate-50 text-slate-600 border-b border-slate-200 font-semibold">
+                  <th class="py-2.5 px-3">來源地 (From)</th>
+                  <th class="py-2.5 px-3">目的地 (To)</th>
+                  <th class="py-2.5 px-3 text-right">最佳運輸量 (Units)</th>
+                  <th class="py-2.5 px-3 text-right">單位運費 (Unit Cost)</th>
+                  <th class="py-2.5 px-3 text-right">小計運費 (Subtotal)</th>
+                  <th class="py-2.5 px-3">配銷說明</th>
+                </tr>
+              </thead>
+              <tbody id="trans-shipment-tbody" class="divide-y divide-slate-100 font-mono-math">
+                <tr>
+                  <td colspan="6" class="py-4 text-center text-slate-400 font-sans">尚未執行求解</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Step 8: 管理結果分析 -->
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+            <span class="w-6 h-6 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs">8</span>
+            <span>Step 8：結果深度分析與管理意涵 (Post-Optimality & Managerial Analysis)</span>
+          </h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- 供給地剩餘量 -->
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200/70 space-y-2">
+              <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wide">📦 各供給地供應狀態 (Sources Analysis)</h4>
+              <div id="trans-sources-analysis" class="space-y-1.5 text-xs text-slate-700">
+                <span class="text-slate-400">尚未計算</span>
+              </div>
+            </div>
+
+            <!-- 需求地滿足情況 -->
+            <div class="p-4 bg-slate-50 rounded-xl border border-slate-200/70 space-y-2">
+              <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wide">🎯 各需求地滿足狀態 (Destinations Analysis)</h4>
+              <div id="trans-dests-analysis" class="space-y-1.5 text-xs text-slate-700">
+                <span class="text-slate-400">尚未計算</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 綜合管理意涵總結 -->
+          <div class="p-4 bg-indigo-50/70 border border-indigo-200/70 rounded-xl space-y-2">
+            <h4 class="text-xs font-bold text-indigo-900 uppercase tracking-wide">💡 運輸物流決策建議</h4>
+            <div id="trans-managerial-summary" class="text-xs leading-relaxed text-indigo-950 font-normal">
+              尚未產生分析。
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SECTION 3: 指派問題範本 (Assignment)       -->
+    <!-- ========================================== -->
+    <section id="section-assignment" class="space-y-6 hidden">
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <span>👥 管理科學模型範本：指派問題 (Assignment Problem)</span>
+              <span class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-emerald-100 text-emerald-700">經典 0-1 規劃</span>
+            </h2>
+            <p class="text-xs text-slate-500">將 n 名人員一對一最佳指派給 n 項任務，以最小化總工時成本或最大化綜合效益</p>
+          </div>
+          <div class="flex gap-2">
+            <button id="btn-load-assign-example" type="button" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition">
+              📘 載入 4×4 專案團隊指派範例
+            </button>
+            <button id="btn-reset-assign" type="button" class="px-3 py-2 text-xs font-medium rounded-xl bg-slate-100 text-slate-600 hover:bg-slate-200 transition">
+              ↺ 清空重設
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scale Setting & Table -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+        <div class="flex flex-wrap items-center gap-4">
+          <div class="flex items-center gap-2">
+            <label class="text-xs font-medium text-slate-600">指派規模 (n × n)：</label>
+            <select id="assign-size-select" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg font-semibold">
+              <option value="3">3 × 3</option>
+              <option value="4" selected>4 × 4</option>
+              <option value="5">5 × 5</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <label class="text-xs font-medium text-slate-600">最佳化目標：</label>
+            <select id="assign-opt-select" class="px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg font-semibold">
+              <option value="min" selected>最小化總成本/工時 (Min)</option>
+              <option value="max">最大化總效益/評分 (Max)</option>
+            </select>
+          </div>
+
+          <button id="btn-assign-solve" type="button" class="px-5 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition">
+            🚀 求解最佳指派方案
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-center text-xs border border-slate-200 rounded-xl overflow-hidden">
+            <thead id="assign-table-head" class="bg-slate-100 text-slate-700 font-semibold border-b border-slate-200">
+            </thead>
+            <tbody id="assign-table-body" class="divide-y divide-slate-100">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Assignment Solution Output -->
+      <div id="assign-solution-card" class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <h3 class="text-sm font-bold text-slate-900">最佳指派配對方案 (Optimal Assignment)</h3>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-500">最佳目標總值 (Z*)：</span>
+            <span id="assign-total-cost" class="text-lg font-bold text-emerald-700 font-mono-math">--</span>
+          </div>
+        </div>
+        <div id="assign-results-list" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+          <span class="text-slate-400">請點擊求解</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SECTION 4: AI 輔助與案例庫 (Case Studies)   -->
+    <!-- ========================================== -->
+    <section id="section-ai" class="space-y-6 hidden">
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-2">
+        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <span>💡 AI 輔助建模與經典商管情境案例庫</span>
+          <span class="px-2.5 py-0.5 text-xs font-bold rounded-full bg-purple-100 text-purple-700">自然語言轉模型</span>
+        </h2>
+        <p class="text-xs text-slate-500">使用者可輸入自然語言敘述或代數不等式，或選取經典管理情境。系統將自動剖析決策變數、目標函數與資源限制式，協助建立線性規劃模型。</p>
+      </div>
+
+      <!-- Preset Case Study Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        
+        <!-- Case 1 -->
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex flex-col justify-between hover:border-blue-300 transition group">
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-blue-100 text-blue-700">生產排程</span>
+              <span class="text-xs text-slate-400">作業第4頁</span>
+            </div>
+            <h3 class="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition">工廠兩產品最佳獲利組合</h3>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              工廠生產產品1與產品2，單位利潤分別為 $20 與 $15。生產受到兩種機台工時限制：機台A限制 2x1 + x2 ≤ 20，機台B限制 x1 + 3x2 ≤ 35。求利潤最大化生產量。
+            </p>
+          </div>
+          <button type="button" onclick="loadPresetCase('case1')" class="mt-4 w-full py-2 px-3 text-xs font-bold rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white transition">
+            帶入並立即求解 →
+          </button>
+        </div>
+
+        <!-- Case 2 -->
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex flex-col justify-between hover:border-purple-300 transition group">
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-purple-100 text-purple-700">資本預算</span>
+              <span class="text-xs text-slate-400">0-1 整數規劃</span>
+            </div>
+            <h3 class="text-sm font-bold text-slate-900 group-hover:text-purple-600 transition">科技企業研發專案投資選擇</h3>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              公司有4個研發專案，預估淨現值分別為 10, 15, 25, 8 百萬元，所需資金為 3, 5, 8, 2 百萬元。在總預算 10 百萬元上限下，選取最佳投資專案組合。
+            </p>
+          </div>
+          <button type="button" onclick="loadPresetCase('case2')" class="mt-4 w-full py-2 px-3 text-xs font-bold rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-600 hover:text-white transition">
+            帶入並立即求解 →
+          </button>
+        </div>
+
+        <!-- Case 3 -->
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 flex flex-col justify-between hover:border-emerald-300 transition group">
+          <div class="space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="px-2 py-0.5 text-[11px] font-bold rounded bg-emerald-100 text-emerald-700">飲食配方</span>
+              <span class="text-xs text-slate-400">成本最小化</span>
+            </div>
+            <h3 class="text-sm font-bold text-slate-900 group-hover:text-emerald-600 transition">飼料營養配方最低成本模型</h3>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              混合穀物A與穀物B調製飼料，每公斤成本分別為 $5 與 $8。需確保蛋白質含量 2x1 + 4x2 ≥ 16，維生素含量 4x1 + 2x2 ≥ 16。求最低成本配方。
+            </p>
+          </div>
+          <button type="button" onclick="loadPresetCase('case3')" class="mt-4 w-full py-2 px-3 text-xs font-bold rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white transition">
+            帶入並立即求解 →
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Natural Language AI Assistant Box -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <span>🤖 自然語言與數學式智慧解析小幫手 (AI Modeling Assistant)</span>
+          </h3>
+          <button id="btn-nl-fill-sample" type="button" class="text-xs font-semibold text-purple-600 hover:text-purple-800 underline">
+            填入範例題目文字
+          </button>
+        </div>
+        <p class="text-xs text-slate-500">可輸入自然語言問題敘述或直接貼上代數模型（支援多變數、≤ / ≥ / = 限制式、整數與 0-1 關鍵字）：</p>
+        
+        <textarea id="nl-input-text" rows="4" class="w-full p-3 text-xs sm:text-sm bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:ring-2 focus:ring-blue-500 leading-relaxed" placeholder="例如：我想最大化利潤，有兩種產品 A 和 B。產品A利潤 30 元，產品B利潤 40 元。原料限制：2A + 3B <= 60，工時限制：4A + 2B <= 80"></textarea>
+
+        <div class="flex justify-end gap-2">
+          <button id="btn-nl-parse" type="button" class="px-5 py-2 text-xs font-bold rounded-xl bg-purple-600 hover:bg-purple-700 text-white shadow-sm transition">
+            ✨ 解析文字並載入計算器求解
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 mt-12 py-6 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto px-4 space-y-1">
+      <p class="font-medium text-slate-700">管理數學作業1：網頁版線性規劃計算器 (Web-based LP Calculator)</p>
+      <p>支援 Two-Phase Simplex、Branch and Bound 整數規劃、2D幾何圖形化分析、運輸問題專用範本與敏感度分析</p>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script>
+    // ==========================================
+    // 0. Utility: Toast Notification
+    // ==========================================
+    let toastTimer = null;
+    function showToast(msg, type = 'info') {
+      const el = document.getElementById('app-toast');
+      if (!el) return;
+      if (toastTimer) clearTimeout(toastTimer);
+      const styles = {
+        info: 'bg-slate-900 text-white border-slate-700',
+        success: 'bg-emerald-900 text-emerald-50 border-emerald-700',
+        warn: 'bg-amber-900 text-amber-50 border-amber-700',
+        error: 'bg-rose-900 text-rose-50 border-rose-700'
+      };
+      el.className = `fixed bottom-5 right-5 z-50 max-w-sm px-4 py-3 rounded-xl shadow-lg border text-xs font-medium transition-all duration-200 ${styles[type] || styles.info}`;
+      el.textContent = msg;
+      el.classList.remove('hidden');
+      toastTimer = setTimeout(() => {
+        el.classList.add('hidden');
+      }, 3200);
+    }
+
+    // ==========================================
+    // 1. Core Linear Programming Engine (Two-Phase Simplex + Branch and Bound)
+    // ==========================================
+    const EPS = 1e-7;
+
+    function solveStandardLP(model) {
+      const isMin = model.type === 'min';
+      const numOrigVars = model.objective.length;
+      const numConstraints = model.constraints.length;
+
+      if (numConstraints === 0) {
+        return { status: 'UNBOUNDED' };
+      }
+
+      // Standardize constraints to RHS >= 0
+      const normConstraints = model.constraints.map(c => {
+        let coeffs = [...c.coeffs];
+        let op = c.op;
+        let rhs = Number(c.rhs) || 0;
+        if (rhs < 0) {
+          coeffs = coeffs.map(v => -(Number(v) || 0));
+          rhs = -rhs;
+          if (op === '<=') op = '>=';
+          else if (op === '>=') op = '<=';
+        } else {
+          coeffs = coeffs.map(v => Number(v) || 0);
+        }
+        return { coeffs, op, rhs };
+      });
+
+      let numSlack = 0;
+      let numSurplus = 0;
+      let numArtificial = 0;
+
+      normConstraints.forEach(c => {
+        if (c.op === '<=') numSlack++;
+        else if (c.op === '>=') { numSurplus++; numArtificial++; }
+        else if (c.op === '=') { numArtificial++; }
+      });
+
+      const nonArtVars = numOrigVars + numSlack + numSurplus;
+      const totalVars = nonArtVars + numArtificial;
+      const rows = numConstraints + 1;
+      const cols = totalVars + 1;
+
+      const usePhase1 = numArtificial > 0;
+
+      function makeTableau(numRows, numCols) {
+        const t = [];
+        for (let i = 0; i < numRows; i++) {
+          t.push(new Float64Array(numCols));
+        }
+        return t;
+      }
+
+      let curSlack = 0;
+      let curSurplus = 0;
+      let curArt = 0;
+      const basis = new Int32Array(numConstraints);
+      const artIndices = [];
+
+      const T1 = makeTableau(rows, cols);
+
+      normConstraints.forEach((c, i) => {
+        for (let j = 0; j < numOrigVars; j++) {
+          T1[i][j] = c.coeffs[j] || 0;
+        }
+        if (c.op === '<=') {
+          const col = numOrigVars + curSlack;
+          T1[i][col] = 1;
+          basis[i] = col;
+          curSlack++;
+        } else if (c.op === '>=') {
+          const surCol = numOrigVars + numSlack + curSurplus;
+          T1[i][surCol] = -1;
+          curSurplus++;
+
+          const artCol = nonArtVars + curArt;
+          T1[i][artCol] = 1;
+          basis[i] = artCol;
+          artIndices.push(artCol);
+          curArt++;
+        } else if (c.op === '=') {
+          const artCol = nonArtVars + curArt;
+          T1[i][artCol] = 1;
+          basis[i] = artCol;
+          artIndices.push(artCol);
+          curArt++;
+        }
+        T1[i][cols - 1] = c.rhs;
+      });
+
+      function pivot(tableau, pRow, pCol) {
+        const pVal = tableau[pRow][pCol];
+        const nCols = tableau[0].length;
+        for (let j = 0; j < nCols; j++) {
+          tableau[pRow][j] /= pVal;
+        }
+        // Clamp tiny negative RHS caused by floating point division
+        if (Math.abs(tableau[pRow][nCols - 1]) < 1e-12) {
+          tableau[pRow][nCols - 1] = 0;
+        }
+        for (let i = 0; i < tableau.length; i++) {
+          if (i !== pRow) {
+            const factor = tableau[i][pCol];
+            if (Math.abs(factor) > 1e-12) {
+              for (let j = 0; j < nCols; j++) {
+                tableau[i][j] -= factor * tableau[pRow][j];
+              }
+              if (i < tableau.length - 1 && Math.abs(tableau[i][nCols - 1]) < 1e-12) {
+                tableau[i][nCols - 1] = 0;
+              }
+            }
+          }
+        }
+        basis[pRow] = pCol;
+      }
+
+      function runSimplex(tableau, maxEnterColLimit) {
+        const nRows = tableau.length;
+        const nCols = tableau[0].length;
+        const colLimit = maxEnterColLimit !== undefined ? maxEnterColLimit : (nCols - 1);
+        const maxIterations = 2500;
+        let iter = 0;
+
+        while (iter++ < maxIterations) {
+          let enterCol = -1;
+          // Bland's rule: choose smallest column index j with negative reduced cost
+          for (let j = 0; j < colLimit; j++) {
+            if (tableau[nRows - 1][j] < -EPS) {
+              enterCol = j;
+              break;
+            }
+          }
+
+          if (enterCol === -1) {
+            return 'OPTIMAL';
+          }
+
+          let leaveRow = -1;
+          let minRatio = Infinity;
+
+          for (let i = 0; i < nRows - 1; i++) {
+            const a_ij = tableau[i][enterCol];
+            if (a_ij > EPS) {
+              const rhsVal = Math.max(0, tableau[i][nCols - 1]);
+              const ratio = rhsVal / a_ij;
+              if (ratio < minRatio - 1e-11) {
+                minRatio = ratio;
+                leaveRow = i;
+              } else if (Math.abs(ratio - minRatio) <= 1e-11 && leaveRow !== -1) {
+                // Bland's tie-breaking rule on smallest basic variable index
+                if (basis[i] < basis[leaveRow]) {
+                  leaveRow = i;
+                }
+              }
+            }
+          }
+
+          if (leaveRow === -1) {
+            return 'UNBOUNDED';
+          }
+
+          pivot(tableau, leaveRow, enterCol);
+        }
+        return 'MAX_ITERATIONS';
+      }
+
+      if (usePhase1) {
+        for (let artCol of artIndices) {
+          T1[rows - 1][artCol] = 1;
+        }
+        for (let i = 0; i < numConstraints; i++) {
+          const bCol = basis[i];
+          if (artIndices.includes(bCol)) {
+            for (let j = 0; j < cols; j++) {
+              T1[rows - 1][j] -= T1[i][j];
+            }
+          }
+        }
+
+        // Only allow non-artificial variables to enter during Phase 1
+        const p1Status = runSimplex(T1, nonArtVars);
+        if (p1Status === 'UNBOUNDED') return { status: 'UNBOUNDED' };
+
+        const artSum = -T1[rows - 1][cols - 1];
+        if (artSum > 1e-4) {
+          return { status: 'INFEASIBLE' };
+        }
+
+        // Drive out artificial variables from basis if still there at zero level
+        for (let i = 0; i < numConstraints; i++) {
+          if (artIndices.includes(basis[i])) {
+            let candCol = -1;
+            for (let j = 0; j < nonArtVars; j++) {
+              if (Math.abs(T1[i][j]) > EPS) {
+                candCol = j;
+                break;
+              }
+            }
+            if (candCol !== -1) {
+              // If RHS is 0 and pivot element is negative, flip row sign first to preserve non-negative RHS
+              if (T1[i][candCol] < 0 && Math.abs(T1[i][cols - 1]) < 1e-6) {
+                for (let j = 0; j < cols; j++) T1[i][j] = -T1[i][j];
+              }
+              pivot(T1, i, candCol);
+            }
+          }
+        }
+      }
+
+      // Phase 2
+      const p2Cols = nonArtVars + 1;
+      const T2 = makeTableau(rows, p2Cols);
+
+      for (let i = 0; i < numConstraints; i++) {
+        for (let j = 0; j < p2Cols - 1; j++) {
+          T2[i][j] = T1[i][j];
+        }
+        T2[i][p2Cols - 1] = Math.max(0, T1[i][cols - 1]);
+      }
+
+      const cNorm = model.objective.map(v => isMin ? -(Number(v) || 0) : (Number(v) || 0));
+      for (let j = 0; j < numOrigVars; j++) {
+        T2[rows - 1][j] = -cNorm[j];
+      }
+
+      for (let i = 0; i < numConstraints; i++) {
+        const bCol = basis[i];
+        if (bCol < p2Cols - 1) {
+          const mult = T2[rows - 1][bCol];
+          if (Math.abs(mult) > 1e-12) {
+            for (let j = 0; j < p2Cols; j++) {
+              T2[rows - 1][j] -= mult * T2[i][j];
+            }
+          }
+        }
+      }
+
+      const p2Status = runSimplex(T2, nonArtVars);
+      if (p2Status !== 'OPTIMAL') {
+        return { status: p2Status };
+      }
+
+      const solution = new Array(numOrigVars).fill(0);
+      for (let i = 0; i < numConstraints; i++) {
+        const bCol = basis[i];
+        if (bCol < numOrigVars) {
+          solution[bCol] = Math.max(0, T2[i][p2Cols - 1]);
+        }
+      }
+
+      // Compute exact objective value from variables to prevent floating-point drift
+      let objVal = 0;
+      for (let j = 0; j < numOrigVars; j++) {
+        objVal += (Number(model.objective[j]) || 0) * solution[j];
+      }
+
+      return {
+        status: 'OPTIMAL',
+        objectiveValue: objVal,
+        variables: solution,
+        basis: [...basis]
+      };
+    }
+
+    // Wrapper supporting unrestricted variables (when nonNegative === false)
+    function solveLP(model) {
+      const nonNeg = model.nonNegative !== false;
+      if (nonNeg) {
+        return solveStandardLP(model);
+      }
+
+      // Split each variable x_j into x_j^+ - x_j^- (except binary variables which stay in [0,1])
+      const varTypes = model.varTypes || model.objective.map(() => 'continuous');
+      const expObjective = [];
+      const varMap = []; // stores { posIdx, negIdx }
+
+      for (let j = 0; j < model.objective.length; j++) {
+        const c = Number(model.objective[j]) || 0;
+        if (varTypes[j] === 'binary') {
+          const idx = expObjective.length;
+          expObjective.push(c);
+          varMap.push({ posIdx: idx, negIdx: -1 });
+        } else {
+          const posIdx = expObjective.length;
+          expObjective.push(c);
+          const negIdx = expObjective.length;
+          expObjective.push(-c);
+          varMap.push({ posIdx, negIdx });
+        }
+      }
+
+      const expConstraints = model.constraints.map(c => {
+        const newCoeffs = [];
+        for (let j = 0; j < model.objective.length; j++) {
+          const a = Number(c.coeffs[j]) || 0;
+          if (varMap[j].negIdx === -1) {
+            newCoeffs.push(a);
+          } else {
+            newCoeffs.push(a, -a);
+          }
+        }
+        return { coeffs: newCoeffs, op: c.op, rhs: c.rhs };
+      });
+
+      const res = solveStandardLP({
+        type: model.type,
+        objective: expObjective,
+        constraints: expConstraints
+      });
+
+      if (res.status !== 'OPTIMAL') return res;
+
+      const origVars = varMap.map(m => {
+        if (m.negIdx === -1) return res.variables[m.posIdx];
+        return res.variables[m.posIdx] - res.variables[m.negIdx];
+      });
+
+      let objVal = 0;
+      for (let j = 0; j < origVars.length; j++) {
+        objVal += (Number(model.objective[j]) || 0) * origVars[j];
+      }
+
+      return {
+        status: 'OPTIMAL',
+        objectiveValue: objVal,
+        variables: origVars,
+        basis: res.basis
+      };
+    }
+
+    // Helper to build constraints with binary upper bounds included
+    function getConstraintsWithBinaryBounds(model) {
+      const varTypes = model.varTypes || model.objective.map(() => 'continuous');
+      const baseConstraints = model.constraints.map(c => ({
+        coeffs: [...c.coeffs],
+        op: c.op,
+        rhs: Number(c.rhs) || 0,
+        name: c.name
+      }));
+
+      for (let j = 0; j < varTypes.length; j++) {
+        if (varTypes[j] === 'binary') {
+          const coeffs = new Array(model.objective.length).fill(0);
+          coeffs[j] = 1;
+          baseConstraints.push({ coeffs, op: '<=', rhs: 1, isBinaryBound: true });
+        }
+      }
+      return baseConstraints;
+    }
+
+    // Branch and Bound for MIP / BIP
+    function solveMIP(model) {
+      const varTypes = model.varTypes || model.objective.map(() => 'continuous');
+      const hasInt = varTypes.some(t => t === 'integer' || t === 'binary');
+
+      if (!hasInt) {
+        return solveLP(model);
+      }
+
+      const isMin = model.type === 'min';
+      const baseConstraints = getConstraintsWithBinaryBounds(model);
+
+      // First check if LP relaxation is infeasible or unbounded
+      const rootLP = solveLP({
+        type: model.type,
+        nonNegative: model.nonNegative,
+        varTypes: varTypes,
+        objective: model.objective,
+        constraints: baseConstraints
+      });
+      if (rootLP.status !== 'OPTIMAL') {
+        return rootLP;
+      }
+
+      let bestSol = null;
+      let bestObj = isMin ? Infinity : -Infinity;
+      let nodesExplored = 0;
+
+      function isInteger(val) {
+        return Math.abs(val - Math.round(val)) < 1e-5;
+      }
+
+      function branch(currentConstraints, depth) {
+        if (depth > 45 || nodesExplored > 1200) return;
+        nodesExplored++;
+
+        const subModel = {
+          type: model.type,
+          nonNegative: model.nonNegative,
+          varTypes: varTypes,
+          objective: model.objective,
+          constraints: currentConstraints
+        };
+
+        const res = solveLP(subModel);
+        if (res.status !== 'OPTIMAL') return;
+
+        // Bounding
+        if (bestSol !== null) {
+          if (isMin && res.objectiveValue >= bestObj - 1e-6) return;
+          if (!isMin && res.objectiveValue <= bestObj + 1e-6) return;
+        }
+
+        // Find most fractional variable
+        let fracIdx = -1;
+        let maxFracDist = 0;
+
+        for (let j = 0; j < varTypes.length; j++) {
+          if (varTypes[j] === 'integer' || varTypes[j] === 'binary') {
+            const val = res.variables[j];
+            if (!isInteger(val)) {
+              const dist = Math.abs(val - Math.round(val));
+              if (dist > maxFracDist) {
+                maxFracDist = dist;
+                fracIdx = j;
+              }
+            }
+          }
+        }
+
+        if (fracIdx === -1) {
+          const cleanVars = res.variables.map((v, j) => (varTypes[j] !== 'continuous' ? Math.round(v) : v));
+          let exactObj = 0;
+          for (let j = 0; j < cleanVars.length; j++) {
+            exactObj += (Number(model.objective[j]) || 0) * cleanVars[j];
+          }
+          if ((isMin && exactObj < bestObj) || (!isMin && exactObj > bestObj)) {
+            bestObj = exactObj;
+            bestSol = {
+              status: 'OPTIMAL',
+              objectiveValue: exactObj,
+              variables: cleanVars
+            };
+          }
+          return;
+        }
+
+        const val = res.variables[fracIdx];
+        const floorVal = Math.floor(val);
+        const ceilVal = Math.ceil(val);
+
+        // Explore the more promising branch first based on objective coefficient sign
+        const c_k = Number(model.objective[fracIdx]) || 0;
+        const preferCeil = (!isMin && c_k >= 0) || (isMin && c_k < 0);
+
+        const cFloor = { coeffs: new Array(model.objective.length).fill(0), op: '<=', rhs: floorVal };
+        cFloor.coeffs[fracIdx] = 1;
+
+        const cCeil = { coeffs: new Array(model.objective.length).fill(0), op: '>=', rhs: ceilVal };
+        cCeil.coeffs[fracIdx] = 1;
+
+        if (preferCeil) {
+          branch([...currentConstraints, cCeil], depth + 1);
+          branch([...currentConstraints, cFloor], depth + 1);
+        } else {
+          branch([...currentConstraints, cFloor], depth + 1);
+          branch([...currentConstraints, cCeil], depth + 1);
+        }
+      }
+
+      branch(baseConstraints, 0);
+
+      if (!bestSol) {
+        return { status: 'INFEASIBLE' };
+      }
+      return bestSol;
+    }
+
+    // ==========================================
+    // 2. State & Model Data Structure
+    // ==========================================
+    const appState = {
+      optType: 'max', // 'max' | 'min'
+      nonNegative: true,
+      variables: [
+        { id: 'v1', name: 'x1', label: '產品 A', coeff: 20, type: 'continuous' },
+        { id: 'v2', name: 'x2', label: '產品 B', coeff: 15, type: 'continuous' }
+      ],
+      constraints: [
+        { id: 'c1', name: '機台A工時', coeffs: [2, 1], op: '<=', rhs: 20 },
+        { id: 'c2', name: '機台B工時', coeffs: [1, 3], op: '<=', rhs: 35 }
+      ],
+      lastResult: null
+    };
+
+    // ==========================================
+    // 3. UI Rendering: Variables & Constraints
+    // ==========================================
+    function renderVariables() {
+      const container = document.getElementById('variables-container');
+      container.innerHTML = '';
+
+      appState.variables.forEach((v, index) => {
+        const row = document.createElement('div');
+        row.className = 'flex flex-wrap items-center gap-2 p-2.5 bg-slate-50 rounded-xl border border-slate-200/80 text-xs';
+
+        row.innerHTML = `
+          <span class="w-6 font-bold text-slate-700 font-mono-math">${v.name}</span>
+          
+          <div class="flex-1 min-w-[90px]">
+            <input type="text" value="${v.label || ''}" placeholder="自訂標籤 (如: 產品A)" class="var-label-input w-full px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-700 focus:ring-1 focus:ring-blue-500" data-idx="${index}">
+          </div>
+
+          <div class="flex items-center gap-1">
+            <span class="text-slate-400 font-medium">目標係數:</span>
+            <input type="number" step="any" value="${v.coeff}" class="var-coeff-input w-20 px-2 py-1 bg-white border border-slate-200 rounded-lg font-mono-math text-right focus:ring-1 focus:ring-blue-500 font-semibold" data-idx="${index}">
+          </div>
+
+          <div>
+            <select class="var-type-select px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-700 text-xs" data-idx="${index}">
+              <option value="continuous" ${v.type === 'continuous' ? 'selected' : ''}>連續 (Continuous)</option>
+              <option value="integer" ${v.type === 'integer' ? 'selected' : ''}>整數 (Integer)</option>
+              <option value="binary" ${v.type === 'binary' ? 'selected' : ''}>0-1 二元 (Binary)</option>
+            </select>
+          </div>
+
+          ${appState.variables.length > 1 ? `
+            <button type="button" class="btn-del-var text-rose-500 hover:text-rose-700 p-1 rounded hover:bg-rose-50 transition" data-idx="${index}" title="刪除變數">
+              ✕
+            </button>
+          ` : ''}
+        `;
+        container.appendChild(row);
+      });
+
+      // Attach event listeners
+      container.querySelectorAll('.var-label-input').forEach(input => {
+        input.addEventListener('input', e => {
+          const idx = parseInt(e.target.dataset.idx);
+          appState.variables[idx].label = e.target.value;
+          updateMathPreview();
+        });
+      });
+      container.querySelectorAll('.var-coeff-input').forEach(input => {
+        input.addEventListener('input', e => {
+          const idx = parseInt(e.target.dataset.idx);
+          appState.variables[idx].coeff = parseFloat(e.target.value) || 0;
+          updateMathPreview();
+        });
+      });
+      container.querySelectorAll('.var-type-select').forEach(select => {
+        select.addEventListener('change', e => {
+          const idx = parseInt(e.target.dataset.idx);
+          appState.variables[idx].type = e.target.value;
+          updateMathPreview();
+        });
+      });
+      container.querySelectorAll('.btn-del-var').forEach(btn => {
+        btn.addEventListener('click', e => {
+          const idx = parseInt(e.currentTarget.dataset.idx);
+          deleteVariable(idx);
+        });
+      });
+
+      renderConstraints();
+      updateMathPreview();
+    }
+
+    function renderConstraints() {
+      const container = document.getElementById('constraints-container');
+      container.innerHTML = '';
+
+      appState.constraints.forEach((c, cIdx) => {
+        const row = document.createElement('div');
+        row.className = 'p-3 bg-slate-50 rounded-xl border border-slate-200/80 space-y-2 text-xs';
+
+        let coeffsHtml = '';
+        appState.variables.forEach((v, vIdx) => {
+          const val = c.coeffs[vIdx] !== undefined ? c.coeffs[vIdx] : 0;
+          coeffsHtml += `
+            <div class="flex items-center gap-1">
+              <input type="number" step="any" value="${val}" class="con-coeff-input w-16 px-2 py-1 bg-white border border-slate-200 rounded-lg font-mono-math text-right font-medium" data-cidx="${cIdx}" data-vidx="${vIdx}">
+              <span class="font-mono-math font-semibold text-slate-700">${v.name}</span>
+              ${vIdx < appState.variables.length - 1 ? '<span class="text-slate-400 font-bold">+</span>' : ''}
+            </div>
+          `;
+        });
+
+        row.innerHTML = `
+          <div class="flex items-center justify-between gap-2 border-b border-slate-200/60 pb-1.5">
+            <input type="text" value="${c.name || ''}" placeholder="限制式名稱 (如: 產能限制)" class="con-name-input px-2 py-0.5 bg-white border border-slate-200 rounded text-slate-700 font-medium text-xs w-40 focus:ring-1 focus:ring-blue-500" data-cidx="${cIdx}">
+            ${appState.constraints.length > 1 ? `
+              <button type="button" class="btn-del-con text-rose-500 hover:text-rose-700 p-1 rounded hover:bg-rose-50 transition" data-cidx="${cIdx}" title="刪除限制式">
+                ✕ 刪除
+              </button>
+            ` : ''}
+          </div>
+
+          <div class="flex flex-wrap items-center gap-2 pt-1">
+            <div class="flex flex-wrap items-center gap-1.5">
+              ${coeffsHtml}
+            </div>
+
+            <div class="flex items-center gap-1.5 ml-auto">
+              <select class="con-op-select px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-700 font-bold text-xs" data-cidx="${cIdx}">
+                <option value="<=" ${c.op === '<=' ? 'selected' : ''}>≤</option>
+                <option value="=" ${c.op === '=' ? 'selected' : ''}>=</option>
+                <option value=">=" ${c.op === '>=' ? 'selected' : ''}>≥</option>
+              </select>
+
+              <input type="number" step="any" value="${c.rhs}" class="con-rhs-input w-20 px-2 py-1 bg-white border border-slate-200 rounded-lg font-mono-math text-right font-bold text-blue-700" data-cidx="${cIdx}">
+            </div>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+
+      // Event listeners
+      container.querySelectorAll('.con-name-input').forEach(input => {
+        input.addEventListener('input', e => {
+          const cIdx = parseInt(e.target.dataset.cidx);
+          appState.constraints[cIdx].name = e.target.value;
+          updateMathPreview();
+        });
+      });
+      container.querySelectorAll('.con-coeff-input').forEach(input => {
+        input.addEventListener('input', e => {
+          const cIdx = parseInt(e.target.dataset.cidx);
+          const vIdx = parseInt(e.target.dataset.vidx);
+          appState.constraints[cIdx].coeffs[vIdx] = parseFloat(e.target.value) || 0;
+          updateMathPreview();
+        });
+      });
+      container.querySelectorAll('.con-op-select').forEach(select => {
+        select.addEventListener('change', e => {
+          const cIdx = parseInt(e.target.dataset.cidx);
+          appState.constraints[cIdx].op = e.target.value;
+          updateMathPreview();
+        });
+      });
+      container.querySelectorAll('.con-rhs-input').forEach(input => {
+        input.addEventListener('input', e => {
+          const cIdx = parseInt(e.target.dataset.cidx);
+          appState.constraints[cIdx].rhs = parseFloat(e.target.value) || 0;
+          updateMathPreview();
+        });
+      });
+      container.querySelectorAll('.btn-del-con').forEach(btn => {
+        btn.addEventListener('click', e => {
+          const cIdx = parseInt(e.currentTarget.dataset.cidx);
+          deleteConstraint(cIdx);
+        });
+      });
+
+      updateMathPreview();
+    }
+
+    function addVariable() {
+      const nextNum = appState.variables.length + 1;
+      appState.variables.push({
+        id: 'v' + nextNum,
+        name: 'x' + nextNum,
+        label: '變數 ' + nextNum,
+        coeff: 10,
+        type: 'continuous'
+      });
+      appState.constraints.forEach(c => {
+        c.coeffs.push(1);
+      });
+      renderVariables();
+    }
+
+    function deleteVariable(idx) {
+      if (appState.variables.length <= 1) return;
+      appState.variables.splice(idx, 1);
+      appState.variables.forEach((v, i) => {
+        v.name = 'x' + (i + 1);
+      });
+      appState.constraints.forEach(c => {
+        c.coeffs.splice(idx, 1);
+      });
+      renderVariables();
+    }
+
+    function addConstraint() {
+      const nextNum = appState.constraints.length + 1;
+      const coeffs = appState.variables.map(() => 1);
+      appState.constraints.push({
+        id: 'c' + nextNum,
+        name: '限制式 ' + nextNum,
+        coeffs: coeffs,
+        op: '<=',
+        rhs: 20
+      });
+      renderConstraints();
+    }
+
+    function deleteConstraint(cIdx) {
+      if (appState.constraints.length <= 1) return;
+      appState.constraints.splice(cIdx, 1);
+      renderConstraints();
+    }
+
+    // ==========================================
+    // 4. Mathematical Model Preview Formatter
+    // ==========================================
+    function updateMathPreview() {
+      const preview = document.getElementById('math-model-preview');
+      const optWord = appState.optType === 'max' ? 'max' : 'min';
+
+      let objStr = `${optWord} Z = `;
+      const objTerms = [];
+      appState.variables.forEach(v => {
+        const c = Number(v.coeff) || 0;
+        const sign = c >= 0 ? '+' : '-';
+        const absVal = Math.abs(c);
+        const term = `${absVal === 1 ? '' : absVal}${v.name}`;
+        objTerms.push({ sign, term, val: c });
+      });
+
+      if (objTerms.length === 0) {
+        objStr += '0';
+      } else {
+        let first = true;
+        objTerms.forEach(t => {
+          if (first) {
+            objStr += (t.val < 0 ? '-' : '') + t.term;
+            first = false;
+          } else {
+            objStr += ` ${t.sign} ${t.term}`;
+          }
+        });
+      }
+
+      let lines = [objStr, 'subject to:'];
+      appState.constraints.forEach((c) => {
+        let conStr = '  ';
+        let terms = [];
+        appState.variables.forEach((v, vIdx) => {
+          const val = Number(c.coeffs[vIdx]) || 0;
+          if (val !== 0) {
+            const sign = val >= 0 ? '+' : '-';
+            const absVal = Math.abs(val);
+            const term = `${absVal === 1 ? '' : absVal}${v.name}`;
+            terms.push({ sign, term, val });
+          }
+        });
+
+        if (terms.length === 0) {
+          conStr += `0 ${c.op} ${c.rhs}`;
+        } else {
+          let first = true;
+          terms.forEach(t => {
+            if (first) {
+              conStr += (t.val < 0 ? '-' : '') + t.term;
+              first = false;
+            } else {
+              conStr += ` ${t.sign} ${t.term}`;
+            }
+          });
+          conStr += ` ${c.op} ${c.rhs}`;
+        }
+        if (c.name) conStr += `   (${c.name})`;
+        lines.push(conStr);
+      });
+
+      const varNames = appState.variables.map(v => v.name).join(', ');
+      if (appState.nonNegative) {
+        lines.push(`  ${varNames} >= 0`);
+      } else {
+        lines.push(`  ${varNames} ∈ R (無正負號限制)`);
+      }
+
+      const intVars = appState.variables.filter(v => v.type === 'integer').map(v => v.name);
+      if (intVars.length > 0) {
+        lines.push(`  ${intVars.join(', ')} ∈ Z (整數限制)`);
+      }
+      const binVars = appState.variables.filter(v => v.type === 'binary').map(v => v.name);
+      if (binVars.length > 0) {
+        lines.push(`  ${binVars.join(', ')} ∈ {0, 1} (二元限制)`);
+      }
+
+      preview.textContent = lines.join('\n');
+    }
+
+    // ==========================================
+    // 5. Solve & Result Analytics
+    // ==========================================
+    function handleSolveGeneral() {
+      const model = {
+        type: appState.optType,
+        nonNegative: appState.nonNegative,
+        objective: appState.variables.map(v => Number(v.coeff) || 0),
+        varTypes: appState.variables.map(v => v.type),
+        constraints: appState.constraints.map(c => ({
+          name: c.name,
+          coeffs: c.coeffs.map(x => Number(x) || 0),
+          op: c.op,
+          rhs: Number(c.rhs) || 0
+        }))
+      };
+
+      const result = solveMIP(model);
+      appState.lastResult = result;
+
+      const statusBadge = document.getElementById('solution-status-badge');
+      const zElem = document.getElementById('res-optimal-z');
+      const noteElem = document.getElementById('res-optimal-type-note');
+      const varsElem = document.getElementById('res-vars-list');
+
+      if (result.status === 'OPTIMAL') {
+        statusBadge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200';
+        statusBadge.textContent = '✓ 尋得最佳解 (Optimal)';
+        
+        const zRounded = Math.round(result.objectiveValue * 1000) / 1000;
+        zElem.textContent = zRounded.toLocaleString();
+        noteElem.textContent = `${appState.optType === 'max' ? '最大化' : '最小化'}最佳目標值`;
+
+        varsElem.innerHTML = '';
+        result.variables.forEach((val, idx) => {
+          const v = appState.variables[idx];
+          const valRounded = Math.round(val * 1000) / 1000;
+          const p = document.createElement('div');
+          p.className = 'flex items-center justify-between py-1 border-b border-slate-100 last:border-0';
+          p.innerHTML = `
+            <span class="font-semibold text-slate-700">${v.name} <span class="font-normal text-slate-500 font-sans">(${v.label || '無標籤'})</span>:</span>
+            <span class="font-bold text-blue-700 text-sm">${valRounded}</span>
+          `;
+          varsElem.appendChild(p);
+        });
+
+        renderConstraintAnalysis(model, result);
+        renderSensitivityAnalysis(model, result);
+        renderManagementNarrative(model, result);
+
+        if (appState.variables.length === 2) {
+          document.getElementById('card-graphical-analysis').classList.remove('hidden');
+          setupIsoSlider(result);
+          draw2DGraph(result);
+        } else {
+          document.getElementById('card-graphical-analysis').classList.add('hidden');
+        }
+
+      } else if (result.status === 'INFEASIBLE') {
+        statusBadge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-200';
+        statusBadge.textContent = '✕ 無可行解 (Infeasible)';
+        zElem.textContent = '無可行解';
+        noteElem.textContent = '限制條件互相衝突，無滿足所有約束之可行解空間';
+        varsElem.innerHTML = '<span class="text-rose-500">無可行解 (Infeasible Problem)</span>';
+        clearAnalysisTables(false);
+      } else {
+        statusBadge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200';
+        statusBadge.textContent = '⚠ 無界解 (Unbounded)';
+        zElem.textContent = '無限大 (∞)';
+        noteElem.textContent = '可行解空間無封閉邊界，目標值可無限延伸';
+        varsElem.innerHTML = '<span class="text-amber-600">目標函數無界 (Unbounded Problem)</span>';
+        clearAnalysisTables(false);
+      }
+    }
+
+    function renderConstraintAnalysis(model, result) {
+      const tbody = document.getElementById('table-constraints-analysis');
+      tbody.innerHTML = '';
+
+      appState.constraints.forEach((c, idx) => {
+        let lhs = 0;
+        appState.variables.forEach((v, vIdx) => {
+          lhs += (Number(c.coeffs[vIdx]) || 0) * (result.variables[vIdx] || 0);
+        });
+
+        const slack = c.op === '<=' ? (c.rhs - lhs) : (c.op === '>=' ? (lhs - c.rhs) : Math.abs(c.rhs - lhs));
+        const isBinding = Math.abs(slack) < 1e-4;
+        const slackLabel = c.op === '<=' ? 'Slack' : (c.op === '>=' ? 'Surplus' : 'Diff');
+
+        const tr = document.createElement('tr');
+        tr.className = isBinding ? 'bg-amber-50/50 hover:bg-amber-50 font-medium' : 'hover:bg-slate-50';
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 font-sans font-medium text-slate-800">${c.name || '限制式 ' + (idx + 1)}</td>
+          <td class="py-2.5 px-3 text-slate-600">${formatConstraintFormula(c)}</td>
+          <td class="py-2.5 px-3 text-right font-bold text-slate-900">${(Math.round(lhs * 100) / 100).toFixed(2)}</td>
+          <td class="py-2.5 px-3 text-center text-slate-500">${c.op}</td>
+          <td class="py-2.5 px-3 text-right text-slate-700">${c.rhs}</td>
+          <td class="py-2.5 px-3 text-right ${isBinding ? 'text-amber-800 font-bold' : 'text-slate-600'}">${(Math.round(slack * 100) / 100).toFixed(2)} <span class="text-[10px] text-slate-400">(${slackLabel})</span></td>
+          <td class="py-2.5 px-3 text-center font-sans">
+            ${isBinding ? 
+              '<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200">緊束 (Binding)</span>' : 
+              '<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600">非緊束 (Non-binding)</span>'}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderSensitivityAnalysis(model, result) {
+      const tbody = document.getElementById('table-sensitivity-analysis');
+      tbody.innerHTML = '';
+
+      const hasInt = model.varTypes && model.varTypes.some(t => t === 'integer' || t === 'binary');
+      // For continuous LP, use LP relaxation; for MIP, also compute LP relaxation with binary bounds so shadow prices are mathematically consistent
+      const fullConstraints = getConstraintsWithBinaryBounds(model);
+      const baseLPModel = {
+        type: model.type,
+        nonNegative: model.nonNegative,
+        varTypes: model.varTypes,
+        objective: model.objective,
+        constraints: fullConstraints
+      };
+      const baseLPRes = solveLP(baseLPModel);
+
+      appState.constraints.forEach((c, idx) => {
+        let lhs = 0;
+        appState.variables.forEach((v, vIdx) => {
+          lhs += (Number(c.coeffs[vIdx]) || 0) * (result.variables[vIdx] || 0);
+        });
+        const slack = c.op === '<=' ? (c.rhs - lhs) : (c.op === '>=' ? (lhs - c.rhs) : Math.abs(c.rhs - lhs));
+        const isBinding = Math.abs(slack) < 1e-4;
+
+        let shadowPrice = 0;
+        if (hasInt) {
+          // For Integer / 0-1 problems, evaluate discrete +1 unit marginal improvement via MIP solver
+          const pModel = JSON.parse(JSON.stringify(model));
+          pModel.constraints[idx].rhs += 1;
+          const pRes = solveMIP(pModel);
+          if (pRes.status === 'OPTIMAL') {
+            shadowPrice = Math.round((pRes.objectiveValue - result.objectiveValue) * 100) / 100;
+          }
+        } else if (isBinding && baseLPRes.status === 'OPTIMAL') {
+          const delta = 0.01;
+          const pModel = JSON.parse(JSON.stringify(baseLPModel));
+          pModel.constraints[idx].rhs += delta;
+          const pRes = solveLP(pModel);
+          if (pRes.status === 'OPTIMAL') {
+            shadowPrice = Math.round(((pRes.objectiveValue - baseLPRes.objectiveValue) / delta) * 100) / 100;
+          }
+        }
+
+        let interpretation = '';
+        if (hasInt) {
+          if (isBinding) {
+            interpretation = `整數/二元規劃緊束限制。若右端上限增加 1 單位，目標值Z*將變動 ${shadowPrice >= 0 ? '+' : ''}${shadowPrice} 單位。`;
+          } else {
+            interpretation = `尚餘 ${slack.toFixed(2)} 單位裕度。增加 1 單位上限可使目標值變動 ${shadowPrice >= 0 ? '+' : ''}${shadowPrice}。`;
+          }
+        } else if (isBinding) {
+          if (model.type === 'max') {
+            if (shadowPrice > 0) {
+              interpretation = `瓶頸資源 (緊束)。每增加 1 單位資源上限，最大目標值可提升 ${shadowPrice} 單位。`;
+            } else if (shadowPrice < 0) {
+              interpretation = `最低門檻緊束限制。若門檻提高 1 單位，最大目標值將減少 ${Math.abs(shadowPrice)} 單位。`;
+            } else {
+              interpretation = `等號成立 (幾何交點退化或水平目標線)，目前邊際影子價格為 0。`;
+            }
+          } else {
+            // Minimization
+            if (shadowPrice > 0) {
+              interpretation = `緊束需求門檻。最低需求每提高 1 單位，最小總成本將增加 ${shadowPrice} 單位。`;
+            } else if (shadowPrice < 0) {
+              interpretation = `緊束資源上限。每增加 1 單位可用容量，最小總成本可節省 ${Math.abs(shadowPrice)} 單位。`;
+            } else {
+              interpretation = `等號成立，目前邊際成本影響為 0。`;
+            }
+          }
+        } else {
+          if (c.op === '>=') {
+            interpretation = `非緊束 (超額滿足 ${slack.toFixed(2)} 單位)。微幅調整此門檻不影響最佳解，影子價格為 0。`;
+          } else {
+            interpretation = `充裕資源 (尚餘 ${slack.toFixed(2)} 單位閒置)。微幅擴充此資源對最佳目標值無影響。`;
+          }
+        }
+
+        const tr = document.createElement('tr');
+        tr.className = isBinding ? 'bg-amber-50/40' : '';
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 font-sans font-medium text-slate-800">${c.name || '限制式 ' + (idx + 1)}</td>
+          <td class="py-2.5 px-3 text-right font-bold ${Math.abs(shadowPrice) > 1e-4 ? 'text-indigo-700' : 'text-slate-500'}">${shadowPrice.toFixed(2)}</td>
+          <td class="py-2.5 px-3 text-right text-slate-600">${slack.toFixed(2)}</td>
+          <td class="py-2.5 px-3 text-center font-sans">
+            ${isBinding ? 
+              '<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-100 text-rose-800">瓶頸/緊束 (Binding)</span>' : 
+              '<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-100 text-emerald-800">資源充裕 (Non-binding)</span>'}
+          </td>
+          <td class="py-2.5 px-3 text-slate-700 font-sans text-xs">${interpretation}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderManagementNarrative(model, result) {
+      const narrativeBox = document.getElementById('res-management-narrative');
+
+      const varDescriptions = appState.variables.map((v, i) => {
+        const amt = result.variables[i] || 0;
+        const unitStr = v.type === 'binary' ? (amt > 0.5 ? '選取執行 (1)' : '不執行 (0)') : `投入/生產 <strong>${amt.toFixed(2)}</strong> 單位`;
+        return `<strong>${v.label || v.name}</strong>：${unitStr}`;
+      }).join('；');
+
+      const bottlenecks = [];
+      appState.constraints.forEach((c, idx) => {
+        let lhs = 0;
+        appState.variables.forEach((v, vIdx) => {
+          lhs += (Number(c.coeffs[vIdx]) || 0) * (result.variables[vIdx] || 0);
+        });
+        if (Math.abs(c.rhs - lhs) < 1e-4) {
+          bottlenecks.push(`「${c.name || '限制式 ' + (idx + 1)}」`);
+        }
+      });
+
+      let bottleneckText = '';
+      if (bottlenecks.length > 0) {
+        bottleneckText = `<p class="mt-2 text-slate-700">當前關鍵<strong>緊束限制（瓶頸條件）</strong>為：${bottlenecks.join(' 與 ')}。欲進一步突破現有目標極限，管理層應優先針對上述緊束項目進行資源調度或產能擴充。</p>`;
+      } else {
+        bottleneckText = `<p class="mt-2 text-slate-700">目前各項限制條件皆保有緩衝裕度（在整數限制下已達最佳組合）。</p>`;
+      }
+
+      const objAction = appState.optType === 'max' ? '最大目標效益/利潤' : '最小總成本/耗用';
+      narrativeBox.innerHTML = `
+        <p class="font-medium">
+          根據線性規劃求解器運算結果，在滿足所有限制條件下，最佳決策配置方案為：${varDescriptions}。
+        </p>
+        <p class="mt-1.5 text-blue-900 font-semibold">
+          預期可達成之${objAction} (Z*) 為：$${result.objectiveValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} 元。
+        </p>
+        ${bottleneckText}
+      `;
+    }
+
+    function clearAnalysisTables(resetSummary = true) {
+      if (resetSummary) {
+        const statusBadge = document.getElementById('solution-status-badge');
+        statusBadge.className = 'px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-600';
+        statusBadge.textContent = '尚未求解';
+        document.getElementById('res-optimal-z').textContent = '--';
+        document.getElementById('res-optimal-type-note').textContent = '請輸入係數並點擊「立即求解」';
+        document.getElementById('res-vars-list').innerHTML = '<span class="text-slate-400">點擊「立即求解」顯示結果</span>';
+      }
+      document.getElementById('table-constraints-analysis').innerHTML = '<tr><td colspan="7" class="py-4 text-center text-slate-400 font-sans">無限制式分析資料</td></tr>';
+      document.getElementById('table-sensitivity-analysis').innerHTML = '<tr><td colspan="5" class="py-4 text-center text-slate-400 font-sans">無敏感度分析資料</td></tr>';
+      document.getElementById('res-management-narrative').innerHTML = '請輸入模型參數後點擊求解，系統將自動產生決策建議與管理意涵。';
+      document.getElementById('card-graphical-analysis').classList.add('hidden');
+    }
+
+    function formatConstraintFormula(c) {
+      const terms = [];
+      appState.variables.forEach((v, i) => {
+        const coef = Number(c.coeffs[i]) || 0;
+        if (coef !== 0) {
+          const sign = coef >= 0 ? (terms.length > 0 ? '+ ' : '') : '- ';
+          const absVal = Math.abs(coef);
+          terms.push(`${sign}${absVal === 1 ? '' : absVal}${v.name}`);
+        }
+      });
+      return `${terms.length ? terms.join(' ') : '0'} ${c.op} ${c.rhs}`;
+    }
+
+    // ==========================================
+    // 6. 2D Graphical Analysis (HTML5 Canvas)
+    // ==========================================
+    let currentIsoZ = 0;
+    let maxIsoZ = 0;
+
+    function draw2DGraph(result) {
+      const canvas = document.getElementById('lp-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width;
+      const H = canvas.height;
+
+      ctx.clearRect(0, 0, W, H);
+
+      const padLeft = 58;
+      const padBottom = 46;
+      const padTop = 32;
+      const padRight = 32;
+      const plotW = W - padLeft - padRight;
+      const plotH = H - padTop - padBottom;
+
+      // Determine scale maxX and maxY from intercepts and optimal solution
+      let maxX = Math.max(8, result && result.variables ? Math.abs(result.variables[0]) * 1.4 : 10);
+      let maxY = Math.max(8, result && result.variables ? Math.abs(result.variables[1]) * 1.4 : 10);
+
+      appState.constraints.forEach(c => {
+        const a1 = Number(c.coeffs[0]) || 0;
+        const a2 = Number(c.coeffs[1]) || 0;
+        const rhs = Number(c.rhs) || 0;
+        if (Math.abs(a1) > 1e-6 && rhs / a1 > 0) maxX = Math.max(maxX, (rhs / a1) * 1.2);
+        if (Math.abs(a2) > 1e-6 && rhs / a2 > 0) maxY = Math.max(maxY, (rhs / a2) * 1.2);
+      });
+
+      // Also check pairwise constraint intersections so all feasible corners fit inside the view
+      for (let i = 0; i < appState.constraints.length; i++) {
+        for (let j = i + 1; j < appState.constraints.length; j++) {
+          const c1 = appState.constraints[i];
+          const c2 = appState.constraints[j];
+          const det = (c1.coeffs[0] || 0) * (c2.coeffs[1] || 0) - (c1.coeffs[1] || 0) * (c2.coeffs[0] || 0);
+          if (Math.abs(det) > 1e-6) {
+            const ix = (c1.rhs * (c2.coeffs[1] || 0) - (c1.coeffs[1] || 0) * c2.rhs) / det;
+            const iy = ((c1.coeffs[0] || 0) * c2.rhs - c1.rhs * (c2.coeffs[0] || 0)) / det;
+            if (ix > 0 && iy > 0 && ix < 1e4 && iy < 1e4) {
+              maxX = Math.max(maxX, ix * 1.25);
+              maxY = Math.max(maxY, iy * 1.25);
+            }
+          }
+        }
+      }
+
+      maxX = Math.ceil(maxX);
+      maxY = Math.ceil(maxY);
+
+      function toScreenX(x) {
+        return padLeft + (x / maxX) * plotW;
+      }
+      function toScreenY(y) {
+        return padTop + plotH - (y / maxY) * plotH;
+      }
+
+      // Draw Grid & Ticks
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1;
+      ctx.font = '10px JetBrains Mono, monospace';
+      ctx.fillStyle = '#94a3b8';
+      ctx.textAlign = 'center';
+
+      const numTicks = 6;
+      for (let i = 0; i <= numTicks; i++) {
+        const valX = Math.round(((maxX / numTicks) * i) * 10) / 10;
+        const sx = toScreenX(valX);
+        ctx.beginPath();
+        ctx.moveTo(sx, padTop);
+        ctx.lineTo(sx, padTop + plotH);
+        ctx.stroke();
+        ctx.fillText(valX, sx, padTop + plotH + 16);
+      }
+
+      ctx.textAlign = 'right';
+      for (let i = 0; i <= numTicks; i++) {
+        const valY = Math.round(((maxY / numTicks) * i) * 10) / 10;
+        const sy = toScreenY(valY);
+        ctx.beginPath();
+        ctx.moveTo(padLeft, sy);
+        ctx.lineTo(padLeft + plotW, sy);
+        ctx.stroke();
+        ctx.fillText(valY, padLeft - 8, sy + 3);
+      }
+
+      // Clip all geometric regions & lines to the plot box
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(padLeft, padTop, plotW, plotH);
+      ctx.clip();
+
+      // Find Feasible Region Extreme Points within [0, maxX] x [0, maxY]
+      const points = [];
+      const lines = [
+        { a: 1, b: 0, c: 0 },     // x = 0
+        { a: 0, b: 1, c: 0 },     // y = 0
+        { a: 1, b: 0, c: maxX },  // x = maxX (plot boundary for unbounded/min regions)
+        { a: 0, b: 1, c: maxY }   // y = maxY (plot boundary for unbounded/min regions)
+      ];
+      appState.constraints.forEach(con => {
+        lines.push({ a: Number(con.coeffs[0]) || 0, b: Number(con.coeffs[1]) || 0, c: Number(con.rhs) || 0 });
+      });
+      // Include binary bounds if binary
+      appState.variables.forEach((v, vIdx) => {
+        if (v.type === 'binary') {
+          lines.push({ a: vIdx === 0 ? 1 : 0, b: vIdx === 1 ? 1 : 0, c: 1 });
+        }
+      });
+
+      for (let i = 0; i < lines.length; i++) {
+        for (let j = i + 1; j < lines.length; j++) {
+          const l1 = lines[i];
+          const l2 = lines[j];
+          const det = l1.a * l2.b - l1.b * l2.a;
+          if (Math.abs(det) > 1e-7) {
+            const px = (l1.c * l2.b - l1.b * l2.c) / det;
+            const py = (l1.a * l2.c - l1.c * l2.a) / det;
+
+            if (px >= -1e-4 && py >= -1e-4 && px <= maxX + 1e-4 && py <= maxY + 1e-4) {
+              let feasible = true;
+              for (let k = 0; k < appState.constraints.length; k++) {
+                const ck = appState.constraints[k];
+                const val = (Number(ck.coeffs[0]) || 0) * px + (Number(ck.coeffs[1]) || 0) * py;
+                if (ck.op === '<=' && val > ck.rhs + 1e-4) feasible = false;
+                if (ck.op === '>=' && val < ck.rhs - 1e-4) feasible = false;
+                if (ck.op === '=' && Math.abs(val - ck.rhs) > 1e-4) feasible = false;
+              }
+              if (appState.variables[0].type === 'binary' && px > 1 + 1e-4) feasible = false;
+              if (appState.variables[1].type === 'binary' && py > 1 + 1e-4) feasible = false;
+
+              if (feasible) {
+                if (!points.some(pt => Math.abs(pt.x - px) < 1e-3 && Math.abs(pt.y - py) < 1e-3)) {
+                  points.push({ x: Math.max(0, px), y: Math.max(0, py) });
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Draw Feasible Polygon
+      if (points.length >= 3) {
+        const cx = points.reduce((s, p) => s + p.x, 0) / points.length;
+        const cy = points.reduce((s, p) => s + p.y, 0) / points.length;
+        points.sort((p1, p2) => Math.atan2(p1.y - cy, p1.x - cx) - Math.atan2(p2.y - cy, p2.x - cx));
+
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.32)';
+        ctx.strokeStyle = '#60a5fa';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(toScreenX(points[0].x), toScreenY(points[0].y));
+        for (let i = 1; i < points.length; i++) {
+          ctx.lineTo(toScreenX(points[i].x), toScreenY(points[i].y));
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#93c5fd';
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('可行解區域 (Feasible Region)', toScreenX(cx), toScreenY(cy));
+      }
+
+      // Draw Constraint Lines
+      const lineColors = ['#10b981', '#f59e0b', '#ec4899', '#a855f7', '#06b6d4'];
+      appState.constraints.forEach((c, idx) => {
+        const a1 = Number(c.coeffs[0]) || 0;
+        const a2 = Number(c.coeffs[1]) || 0;
+        const color = lineColors[idx % lineColors.length];
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+
+        if (Math.abs(a2) < 1e-6 && Math.abs(a1) > 1e-6) {
+          const xVal = c.rhs / a1;
+          const sx = toScreenX(xVal);
+          ctx.moveTo(sx, padTop);
+          ctx.lineTo(sx, padTop + plotH);
+        } else if (Math.abs(a2) >= 1e-6) {
+          const y0 = c.rhs / a2;
+          const yMax = (c.rhs - a1 * maxX) / a2;
+          ctx.moveTo(toScreenX(0), toScreenY(y0));
+          ctx.lineTo(toScreenX(maxX), toScreenY(yMax));
+        }
+        ctx.stroke();
+
+        ctx.fillStyle = color;
+        ctx.font = 'bold 10px JetBrains Mono, monospace';
+        ctx.textAlign = 'left';
+        ctx.fillText(`C${idx + 1}: ${c.name || formatConstraintFormula(c)}`, padLeft + 10 + (idx % 3) * 140, padTop + 18 + Math.floor(idx / 3) * 14);
+      });
+
+      // Draw Iso-Profit / Iso-Cost line
+      if (result && result.status === 'OPTIMAL') {
+        const c1 = Number(appState.variables[0].coeff) || 0;
+        const c2 = Number(appState.variables[1].coeff) || 0;
+        const targetZ = currentIsoZ;
+
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 2.2;
+        ctx.setLineDash([6, 4]);
+        ctx.beginPath();
+
+        if (Math.abs(c2) > 1e-6) {
+          const yAt0 = targetZ / c2;
+          const yAtMax = (targetZ - c1 * maxX) / c2;
+          ctx.moveTo(toScreenX(0), toScreenY(yAt0));
+          ctx.lineTo(toScreenX(maxX), toScreenY(yAtMax));
+        } else if (Math.abs(c1) > 1e-6) {
+          const xAt0 = targetZ / c1;
+          ctx.moveTo(toScreenX(xAt0), toScreenY(0));
+          ctx.lineTo(toScreenX(xAt0), toScreenY(maxY));
+        }
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      ctx.restore(); // End plot area clip
+
+      // Draw Main Axes Frame
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(padLeft, padTop + plotH);
+      ctx.lineTo(padLeft + plotW, padTop + plotH);
+      ctx.moveTo(padLeft, padTop + plotH);
+      ctx.lineTo(padLeft, padTop);
+      ctx.stroke();
+
+      // Axis Titles
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 12px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${appState.variables[0].name} (${appState.variables[0].label || 'X1'})`, padLeft + plotW / 2, H - 8);
+      ctx.save();
+      ctx.translate(16, padTop + plotH / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText(`${appState.variables[1].name} (${appState.variables[1].label || 'X2'})`, 0, 0);
+      ctx.restore();
+
+      // Draw Optimal Point Marker & Label on top
+      if (result && result.status === 'OPTIMAL') {
+        const optX = result.variables[0] || 0;
+        const optY = result.variables[1] || 0;
+        const screenOptX = toScreenX(optX);
+        const screenOptY = toScreenY(optY);
+
+        ctx.beginPath();
+        ctx.arc(screenOptX, screenOptY, 9, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.35)';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(screenOptX, screenOptY, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#ef4444';
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.fill();
+        ctx.stroke();
+
+        // Smart label placement so it never clips off the canvas
+        const labelText = `★ 最佳解 (${optX.toFixed(2)}, ${optY.toFixed(2)}) | Z*=${result.objectiveValue.toFixed(1)}`;
+        ctx.font = 'bold 11px Inter, sans-serif';
+        const isRightSide = screenOptX > padLeft + plotW * 0.58;
+        const isTopSide = screenOptY < padTop + 40;
+        ctx.textAlign = isRightSide ? 'right' : 'left';
+        const labelX = isRightSide ? screenOptX - 10 : screenOptX + 10;
+        const labelY = isTopSide ? screenOptY + 18 : screenOptY - 10;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(labelText, labelX, labelY);
+      }
+    }
+
+    function setupIsoSlider(result) {
+      if (!result || result.status !== 'OPTIMAL') return;
+      maxIsoZ = result.objectiveValue;
+      currentIsoZ = maxIsoZ;
+
+      const slider = document.getElementById('slider-iso-z');
+      const label = document.getElementById('label-slider-z');
+      const maxLabel = document.getElementById('slider-max-label');
+      const minLabel = document.getElementById('slider-min-label');
+      const isoTitle = document.getElementById('label-iso-title');
+
+      isoTitle.textContent = appState.optType === 'max' ? '動態等利潤線 (Iso-profit Line)：' : '動態等成本線 (Iso-cost Line)：';
+
+      const absMax = Math.max(10, Math.ceil(Math.abs(maxIsoZ) * 1.4));
+      const minVal = maxIsoZ < 0 ? -absMax : 0;
+      slider.min = minVal;
+      slider.max = absMax;
+      slider.step = Math.max(0.1, Math.round((absMax - minVal) / 200 * 10) / 10);
+      slider.value = maxIsoZ;
+
+      minLabel.textContent = minVal;
+      label.textContent = `Z = ${maxIsoZ.toFixed(2)}`;
+      maxLabel.textContent = `Z* (${maxIsoZ.toFixed(1)})`;
+
+      slider.oninput = function() {
+        currentIsoZ = parseFloat(this.value) || 0;
+        label.textContent = `Z = ${currentIsoZ.toFixed(2)}`;
+        draw2DGraph(appState.lastResult);
+      };
+
+      document.getElementById('btn-reset-slider-z').onclick = function() {
+        currentIsoZ = maxIsoZ;
+        slider.value = maxIsoZ;
+        label.textContent = `Z = ${maxIsoZ.toFixed(2)}`;
+        draw2DGraph(appState.lastResult);
+      };
+    }
+
+    // ==========================================
+    // 7. 運輸問題範本邏輯 (Transportation Model)
+    // ==========================================
+    const transState = {
+      numSources: 3,
+      numDests: 4,
+      sourceNames: ['S1 (倉庫1)', 'S2 (倉庫2)', 'S3 (倉庫3)'],
+      destNames: ['市場 A', '市場 B', '市場 C', '市場 D'],
+      costs: [
+        [16, 18, 11, 20],
+        [14, 12, 13, 17],
+        [13, 15, 17, 18]
+      ],
+      supply: [300, 300, 200],
+      demand: [150, 250, 200, 200]
+    };
+
+    function getSourceName(i) {
+      return transState.sourceNames[i] || `S${i + 1} (供給地${i + 1})`;
+    }
+
+    function getDestName(j) {
+      const letter = String.fromCharCode(65 + (j % 26));
+      return transState.destNames[j] || `市場 ${letter}`;
+    }
+
+    function renderTransportationGrid() {
+      const thead = document.getElementById('trans-table-head');
+      const tbody = document.getElementById('trans-table-body');
+      const tfoot = document.getElementById('trans-table-foot');
+
+      let hHtml = `<tr><th class="py-2.5 px-3 border border-slate-200">來源地 \\ 目的地</th>`;
+      for (let j = 0; j < transState.numDests; j++) {
+        hHtml += `<th class="py-2.5 px-3 border border-slate-200">${getDestName(j)}</th>`;
+      }
+      hHtml += `<th class="py-2.5 px-3 bg-blue-50 text-blue-900 border border-slate-200">供應量 (Supply)</th></tr>`;
+      thead.innerHTML = hHtml;
+
+      tbody.innerHTML = '';
+      for (let i = 0; i < transState.numSources; i++) {
+        const tr = document.createElement('tr');
+        let rHtml = `<td class="py-2 px-3 font-semibold bg-slate-50 border border-slate-200">${getSourceName(i)}</td>`;
+        for (let j = 0; j < transState.numDests; j++) {
+          const costVal = (transState.costs[i] && transState.costs[i][j] !== undefined) ? transState.costs[i][j] : 0;
+          rHtml += `
+            <td class="p-1 border border-slate-200">
+              <input type="number" step="any" value="${costVal}" class="trans-cost-input w-16 px-2 py-1 bg-white border border-slate-200 rounded text-center font-mono-math text-xs" data-i="${i}" data-j="${j}">
+            </td>
+          `;
+        }
+        const supVal = transState.supply[i] !== undefined ? transState.supply[i] : 0;
+        rHtml += `
+          <td class="p-1 bg-blue-50/50 border border-slate-200">
+            <input type="number" step="any" value="${supVal}" class="trans-sup-input w-20 px-2 py-1 bg-white border border-blue-200 rounded text-center font-mono-math font-bold text-blue-900 text-xs" data-i="${i}">
+          </td>
+        `;
+        tr.innerHTML = rHtml;
+        tbody.appendChild(tr);
+      }
+
+      let fHtml = `<tr><td class="py-2.5 px-3 font-bold bg-amber-50 text-amber-900 border border-slate-200">需求量 (Demand)</td>`;
+      for (let j = 0; j < transState.numDests; j++) {
+        const demVal = transState.demand[j] !== undefined ? transState.demand[j] : 0;
+        fHtml += `
+          <td class="p-1 bg-amber-50/50 border border-slate-200">
+            <input type="number" step="any" value="${demVal}" class="trans-dem-input w-16 px-2 py-1 bg-white border border-amber-200 rounded text-center font-mono-math font-bold text-amber-900 text-xs" data-j="${j}">
+          </td>
+        `;
+      }
+      fHtml += `<td id="trans-total-balance-cell" class="py-2.5 px-3 font-mono-math font-bold text-xs bg-slate-100 border border-slate-200">--</td></tr>`;
+      tfoot.innerHTML = fHtml;
+
+      tbody.querySelectorAll('.trans-cost-input').forEach(input => {
+        input.addEventListener('input', e => {
+          const i = parseInt(e.target.dataset.i);
+          const j = parseInt(e.target.dataset.j);
+          if (!transState.costs[i]) transState.costs[i] = [];
+          transState.costs[i][j] = parseFloat(e.target.value) || 0;
+        });
+      });
+      tbody.querySelectorAll('.trans-sup-input').forEach(input => {
+        input.addEventListener('input', e => {
+          const i = parseInt(e.target.dataset.i);
+          transState.supply[i] = parseFloat(e.target.value) || 0;
+          updateTransBalance();
+        });
+      });
+      tfoot.querySelectorAll('.trans-dem-input').forEach(input => {
+        input.addEventListener('input', e => {
+          const j = parseInt(e.target.dataset.j);
+          transState.demand[j] = parseFloat(e.target.value) || 0;
+          updateTransBalance();
+        });
+      });
+
+      updateTransBalance();
+    }
+
+    function updateTransBalance() {
+      const totSup = transState.supply.reduce((a, b) => a + (Number(b) || 0), 0);
+      const totDem = transState.demand.reduce((a, b) => a + (Number(b) || 0), 0);
+      const balElem = document.getElementById('trans-total-balance-cell');
+      const indElem = document.getElementById('trans-balance-indicator');
+
+      balElem.textContent = `供 ${totSup} / 需 ${totDem}`;
+      if (Math.abs(totSup - totDem) < 1e-4) {
+        indElem.className = 'font-semibold text-emerald-600';
+        indElem.textContent = `供需平衡 (總量: ${totSup})`;
+      } else if (totSup > totDem) {
+        indElem.className = 'font-semibold text-amber-600';
+        indElem.textContent = `供過於求 (總供應多出 ${totSup - totDem} 單位)`;
+      } else {
+        indElem.className = 'font-semibold text-rose-600';
+        indElem.textContent = `供不應求 (缺口 ${totDem - totSup} 單位，求解時自動加入虛擬供給地)`;
+      }
+    }
+
+    function buildTransportationLPModel() {
+      const m = transState.numSources;
+      const n = transState.numDests;
+      const totSup = transState.supply.reduce((a, b) => a + (Number(b) || 0), 0);
+      const totDem = transState.demand.reduce((a, b) => a + (Number(b) || 0), 0);
+
+      // If Total Supply < Total Demand, add a Dummy Source (虛擬供給地) with supply = shortage and cost = 0
+      const hasDummySource = totSup < totDem - 1e-4;
+      const shortage = hasDummySource ? (totDem - totSup) : 0;
+      const effM = hasDummySource ? m + 1 : m;
+      const numVars = effM * n;
+
+      const objective = [];
+      for (let i = 0; i < m; i++) {
+        for (let j = 0; j < n; j++) {
+          objective.push(Number(transState.costs[i][j]) || 0);
+        }
+      }
+      if (hasDummySource) {
+        for (let j = 0; j < n; j++) objective.push(0);
+      }
+
+      const constraints = [];
+
+      // Supply constraints: sum_j x_ij <= S_i
+      for (let i = 0; i < m; i++) {
+        const coeffs = new Array(numVars).fill(0);
+        for (let j = 0; j < n; j++) {
+          coeffs[i * n + j] = 1;
+        }
+        constraints.push({
+          coeffs: coeffs,
+          op: '<=',
+          rhs: Number(transState.supply[i]) || 0,
+          name: `供給限制 ${getSourceName(i)}`
+        });
+      }
+      if (hasDummySource) {
+        const coeffs = new Array(numVars).fill(0);
+        for (let j = 0; j < n; j++) coeffs[m * n + j] = 1;
+        constraints.push({
+          coeffs: coeffs,
+          op: '=',
+          rhs: shortage,
+          name: `虛擬供給地 (缺貨量 ${shortage})`
+        });
+      }
+
+      // Demand constraints: sum_i x_ij = D_j (exact demand satisfaction)
+      for (let j = 0; j < n; j++) {
+        const coeffs = new Array(numVars).fill(0);
+        for (let i = 0; i < effM; i++) {
+          coeffs[i * n + j] = 1;
+        }
+        constraints.push({
+          coeffs: coeffs,
+          op: '=',
+          rhs: Number(transState.demand[j]) || 0,
+          name: `需求限制 ${getDestName(j)}`
+        });
+      }
+
+      // Format preview (display standard textbook LP formulation)
+      const preview = document.getElementById('trans-math-preview');
+      const objTerms = [];
+      for (let i = 0; i < m; i++) {
+        for (let j = 0; j < n; j++) {
+          objTerms.push(`${Number(transState.costs[i][j]) || 0} x_${i + 1}${j + 1}`);
+        }
+      }
+
+      let lines = [
+        'min Z = ∑ ∑ c_ij * x_ij',
+        '展開目標函數:',
+        '  min Z = ' + objTerms.join(' + '),
+        '',
+        'subject to:'
+      ];
+
+      for (let i = 0; i < m; i++) {
+        const rowTerms = [];
+        for (let j = 0; j < n; j++) rowTerms.push(`x_${i + 1}${j + 1}`);
+        lines.push(`  ${rowTerms.join(' + ')} <= ${transState.supply[i] || 0}   (供給限制 ${getSourceName(i)})`);
+      }
+      for (let j = 0; j < n; j++) {
+        const colTerms = [];
+        for (let i = 0; i < m; i++) colTerms.push(`x_${i + 1}${j + 1}`);
+        const opStr = hasDummySource ? '<=' : '>=';
+        lines.push(`  ${colTerms.join(' + ')} ${opStr} ${transState.demand[j] || 0}   (需求限制 ${getDestName(j)})`);
+      }
+      if (hasDummySource) {
+        lines.push(`  * 註：總供應 (${totSup}) 小於總需求 (${totDem})，系統自動配置虛擬供給地補足 ${shortage} 單位缺口。`);
+      }
+      lines.push('  x_ij >= 0   (∀ i, j)');
+
+      preview.textContent = lines.join('\n');
+
+      return {
+        type: 'min',
+        objective: objective,
+        constraints: constraints,
+        hasDummySource: hasDummySource,
+        shortage: shortage
+      };
+    }
+
+    function solveTransportationModel() {
+      const totSup = transState.supply.reduce((a, b) => a + (Number(b) || 0), 0);
+      const totDem = transState.demand.reduce((a, b) => a + (Number(b) || 0), 0);
+
+      if (totSup <= 0 && totDem <= 0) {
+        showToast('請先輸入有效的供應量與需求量數值！', 'warn');
+        return;
+      }
+
+      const lpModel = buildTransportationLPModel();
+      const res = solveLP(lpModel);
+
+      const m = transState.numSources;
+      const n = transState.numDests;
+      const tbody = document.getElementById('trans-shipment-tbody');
+      const totalCostElem = document.getElementById('trans-total-cost');
+
+      if (res.status === 'OPTIMAL') {
+        totalCostElem.textContent = `$${res.objectiveValue.toLocaleString()}`;
+
+        tbody.innerHTML = '';
+        const activeRoutes = [];
+
+        for (let i = 0; i < m; i++) {
+          for (let j = 0; j < n; j++) {
+            const idx = i * n + j;
+            const amount = res.variables[idx] || 0;
+            if (amount > 1e-4) {
+              const unitCost = Number(transState.costs[i][j]) || 0;
+              const subtotal = amount * unitCost;
+              activeRoutes.push({ from: getSourceName(i), to: getDestName(j), amount, unitCost, subtotal });
+              const tr = document.createElement('tr');
+              tr.className = 'hover:bg-slate-50';
+              tr.innerHTML = `
+                <td class="py-2.5 px-3 font-semibold text-slate-800 font-sans">${getSourceName(i)}</td>
+                <td class="py-2.5 px-3 font-semibold text-blue-700 font-sans">${getDestName(j)}</td>
+                <td class="py-2.5 px-3 text-right font-bold text-slate-900">${Math.round(amount * 100) / 100}</td>
+                <td class="py-2.5 px-3 text-right text-slate-600">$${unitCost}</td>
+                <td class="py-2.5 px-3 text-right font-bold text-emerald-700">$${subtotal.toLocaleString()}</td>
+                <td class="py-2.5 px-3 text-slate-500 font-sans text-xs">由 ${getSourceName(i)} 運往 ${getDestName(j)}</td>
+              `;
+              tbody.appendChild(tr);
+            }
+          }
+        }
+
+        // If dummy source was used, list unfulfilled demand
+        if (lpModel.hasDummySource) {
+          for (let j = 0; j < n; j++) {
+            const dummyAmt = res.variables[m * n + j] || 0;
+            if (dummyAmt > 1e-4) {
+              const tr = document.createElement('tr');
+              tr.className = 'bg-rose-50/60';
+              tr.innerHTML = `
+                <td class="py-2.5 px-3 font-semibold text-rose-700 font-sans">虛擬供給地 (缺貨)</td>
+                <td class="py-2.5 px-3 font-semibold text-rose-700 font-sans">${getDestName(j)}</td>
+                <td class="py-2.5 px-3 text-right font-bold text-rose-700">${Math.round(dummyAmt * 100) / 100}</td>
+                <td class="py-2.5 px-3 text-right text-slate-400">$0</td>
+                <td class="py-2.5 px-3 text-right text-slate-400">$0</td>
+                <td class="py-2.5 px-3 text-rose-600 font-sans text-xs">供不應求，${getDestName(j)} 缺貨 ${Math.round(dummyAmt * 100) / 100} 單位</td>
+              `;
+              tbody.appendChild(tr);
+            }
+          }
+        }
+
+        if (activeRoutes.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-slate-400 font-sans">無需運輸 (需求量為 0)</td></tr>`;
+        }
+
+        renderTransPostAnalysis(res, activeRoutes, lpModel);
+
+      } else {
+        totalCostElem.textContent = '無可行運輸方案';
+        tbody.innerHTML = `<tr><td colspan="6" class="py-4 text-center text-rose-500 font-sans">求解失敗：${res.status} (請檢驗供需量設定)</td></tr>`;
+      }
+    }
+
+    function renderTransPostAnalysis(res, activeRoutes, lpModel) {
+      const m = transState.numSources;
+      const n = transState.numDests;
+
+      const srcBox = document.getElementById('trans-sources-analysis');
+      srcBox.innerHTML = '';
+      for (let i = 0; i < m; i++) {
+        let shipped = 0;
+        for (let j = 0; j < n; j++) {
+          shipped += res.variables[i * n + j] || 0;
+        }
+        const remain = Math.max(0, (Number(transState.supply[i]) || 0) - shipped);
+        const isBinding = Math.abs(remain) < 1e-4;
+        const p = document.createElement('div');
+        p.className = 'flex items-center justify-between py-1 border-b border-slate-200/50 last:border-0';
+        p.innerHTML = `
+          <span>${getSourceName(i)} (供應 ${transState.supply[i]}):</span>
+          <span class="font-bold ${isBinding ? 'text-amber-800' : 'text-slate-700'}">
+            已運出 ${Math.round(shipped * 100) / 100} · ${isBinding ? '全數供應完畢 (Binding)' : `尚餘 ${Math.round(remain * 100) / 100} 單位 (Slack)`}
+          </span>
+        `;
+        srcBox.appendChild(p);
+      }
+
+      const destBox = document.getElementById('trans-dests-analysis');
+      destBox.innerHTML = '';
+      for (let j = 0; j < n; j++) {
+        let received = 0;
+        for (let i = 0; i < m; i++) {
+          received += res.variables[i * n + j] || 0;
+        }
+        const dem = Number(transState.demand[j]) || 0;
+        const sat = received >= dem - 1e-4;
+        const p = document.createElement('div');
+        p.className = 'flex items-center justify-between py-1 border-b border-slate-200/50 last:border-0';
+        p.innerHTML = `
+          <span>${getDestName(j)} (需求 ${dem}):</span>
+          <span class="font-bold ${sat ? 'text-emerald-700' : 'text-rose-700'}">
+            實際收訖 ${Math.round(received * 100) / 100} · ${sat ? '100% 完全滿足 (Binding)' : `缺口 ${Math.round((dem - received) * 100) / 100} 單位`}
+          </span>
+        `;
+        destBox.appendChild(p);
+      }
+
+      const summaryBox = document.getElementById('trans-managerial-summary');
+      const topRoutesStr = activeRoutes
+        .slice()
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 4)
+        .map(r => `${r.from} → ${r.to} (${Math.round(r.amount)} 單位, 運費 $${r.subtotal.toLocaleString()})`)
+        .join('、');
+
+      summaryBox.innerHTML = `
+        <p>本運輸問題透過 Two-Phase Simplex 最佳化求解，獲得最小總運輸成本為 <strong>$${res.objectiveValue.toLocaleString()} 元</strong>。</p>
+        <p class="mt-1">
+          主力配銷路線包含：${topRoutesStr || '無'}。${lpModel.hasDummySource ? `<span class="text-rose-700 font-semibold">由於總供應量小於總需求量，共有 ${lpModel.shortage} 單位需求缺口需透過緊急外包或擴產補足。</span>` : '所有市場需求皆已100%滿足，達成整體物流運籌成本最小化。'}
+        </p>
+      `;
+    }
+
+    // ==========================================
+    // 8. 指派問題範本邏輯 (Assignment Model)
+    // ==========================================
+    const assignState = {
+      size: 4,
+      optType: 'min',
+      matrix: [
+        [9, 2, 7, 8],
+        [6, 4, 3, 7],
+        [5, 8, 1, 8],
+        [7, 6, 9, 4]
+      ],
+      persons: ['研發主管 (A)', '後端工程師 (B)', 'UI設計師 (C)', '測試專家 (D)', '資料科學家 (E)'],
+      tasks: ['專案一 (架構)', '專案二 (開發)', '專案三 (視覺)', '專案四 (QA)', '專案五 (數據)'],
+      lastSolution: null
+    };
+
+    function getPersonName(i) {
+      return assignState.persons[i] || `人員 ${String.fromCharCode(65 + i)}`;
+    }
+
+    function getTaskName(j) {
+      return assignState.tasks[j] || `任務 ${j + 1}`;
+    }
+
+    function renderAssignmentGrid() {
+      const n = assignState.size;
+      const thead = document.getElementById('assign-table-head');
+      const tbody = document.getElementById('assign-table-body');
+
+      let hHtml = `<tr><th class="py-2.5 px-3 border border-slate-200">執行人員 \\ 任務</th>`;
+      for (let j = 0; j < n; j++) {
+        hHtml += `<th class="py-2.5 px-3 border border-slate-200">${getTaskName(j)}</th>`;
+      }
+      hHtml += `</tr>`;
+      thead.innerHTML = hHtml;
+
+      tbody.innerHTML = '';
+      for (let i = 0; i < n; i++) {
+        const tr = document.createElement('tr');
+        let rHtml = `<td class="py-2 px-3 font-semibold bg-slate-50 border border-slate-200">${getPersonName(i)}</td>`;
+        for (let j = 0; j < n; j++) {
+          const val = (assignState.matrix[i] && assignState.matrix[i][j] !== undefined) ? assignState.matrix[i][j] : 0;
+          const isAssigned = assignState.lastSolution && assignState.lastSolution[i * n + j] > 0.5;
+          rHtml += `
+            <td class="p-1 border border-slate-200 ${isAssigned ? 'bg-emerald-100/80' : ''}">
+              <input type="number" step="any" value="${val}" class="assign-cost-input w-16 px-2 py-1 ${isAssigned ? 'bg-emerald-50 border-emerald-500 font-bold text-emerald-900' : 'bg-white border-slate-200'} border rounded text-center font-mono-math text-xs" data-i="${i}" data-j="${j}">
+            </td>
+          `;
+        }
+        rHtml += `</tr>`;
+        tr.innerHTML = rHtml;
+        tbody.appendChild(tr);
+      }
+
+      tbody.querySelectorAll('.assign-cost-input').forEach(input => {
+        input.addEventListener('input', e => {
+          const i = parseInt(e.target.dataset.i);
+          const j = parseInt(e.target.dataset.j);
+          if (!assignState.matrix[i]) assignState.matrix[i] = [];
+          assignState.matrix[i][j] = parseFloat(e.target.value) || 0;
+        });
+      });
+    }
+
+    function solveAssignmentModel() {
+      const n = assignState.size;
+      const numVars = n * n;
+      const objective = [];
+      const varTypes = [];
+
+      for (let i = 0; i < n; i++) {
+        for (let j = 0; j < n; j++) {
+          objective.push(Number(assignState.matrix[i][j]) || 0);
+          varTypes.push('binary');
+        }
+      }
+
+      const constraints = [];
+      for (let i = 0; i < n; i++) {
+        const coeffs = new Array(numVars).fill(0);
+        for (let j = 0; j < n; j++) coeffs[i * n + j] = 1;
+        constraints.push({ coeffs, op: '=', rhs: 1 });
+      }
+      for (let j = 0; j < n; j++) {
+        const coeffs = new Array(numVars).fill(0);
+        for (let i = 0; i < n; i++) coeffs[i * n + j] = 1;
+        constraints.push({ coeffs, op: '=', rhs: 1 });
+      }
+
+      const model = {
+        type: assignState.optType || 'min',
+        objective: objective,
+        varTypes: varTypes,
+        constraints: constraints
+      };
+
+      const res = solveMIP(model);
+      const listElem = document.getElementById('assign-results-list');
+      const totalCostElem = document.getElementById('assign-total-cost');
+
+      if (res.status === 'OPTIMAL') {
+        assignState.lastSolution = res.variables;
+        renderAssignmentGrid(); // highlight assigned cells
+        totalCostElem.textContent = `$${res.objectiveValue.toLocaleString()}`;
+        listElem.innerHTML = '';
+
+        for (let i = 0; i < n; i++) {
+          for (let j = 0; j < n; j++) {
+            const idx = i * n + j;
+            if (res.variables[idx] > 0.5) {
+              const card = document.createElement('div');
+              card.className = 'p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl space-y-1';
+              card.innerHTML = `
+                <div class="font-bold text-slate-800">${getPersonName(i)}</div>
+                <div class="text-emerald-700 font-semibold">↳ ${getTaskName(j)}</div>
+                <div class="text-[11px] text-slate-500 font-mono-math">${assignState.optType === 'max' ? '效益評分' : '成本/耗時'}: $${assignState.matrix[i][j]}</div>
+              `;
+              listElem.appendChild(card);
+            }
+          }
+        }
+      } else {
+        assignState.lastSolution = null;
+        totalCostElem.textContent = '無解';
+        listElem.innerHTML = '<span class="text-rose-500">無法求得最佳指派解</span>';
+      }
+    }
+
+    // ==========================================
+    // 9. Presets & AI Natural Language Assistant
+    // ==========================================
+    function loadPresetCase(caseId) {
+      if (caseId === 'case1') {
+        appState.optType = 'max';
+        appState.nonNegative = true;
+        appState.variables = [
+          { id: 'v1', name: 'x1', label: '產品 1', coeff: 20, type: 'continuous' },
+          { id: 'v2', name: 'x2', label: '產品 2', coeff: 15, type: 'continuous' }
+        ];
+        appState.constraints = [
+          { id: 'c1', name: '機台A工時', coeffs: [2, 1], op: '<=', rhs: 20 },
+          { id: 'c2', name: '機台B工時', coeffs: [1, 3], op: '<=', rhs: 35 }
+        ];
+      } else if (caseId === 'case2') {
+        appState.optType = 'max';
+        appState.nonNegative = true;
+        appState.variables = [
+          { id: 'v1', name: 'x1', label: '專案甲 (AI技術)', coeff: 10, type: 'binary' },
+          { id: 'v2', name: 'x2', label: '專案乙 (雲端平台)', coeff: 15, type: 'binary' },
+          { id: 'v3', name: 'x3', label: '專案丙 (晶片模組)', coeff: 25, type: 'binary' },
+          { id: 'v4', name: 'x4', label: '專案丁 (邊緣計算)', coeff: 8, type: 'binary' }
+        ];
+        appState.constraints = [
+          { id: 'c1', name: '總研發預算上限', coeffs: [3, 5, 8, 2], op: '<=', rhs: 10 }
+        ];
+      } else if (caseId === 'case3') {
+        appState.optType = 'min';
+        appState.nonNegative = true;
+        appState.variables = [
+          { id: 'v1', name: 'x1', label: '穀物 A', coeff: 5, type: 'continuous' },
+          { id: 'v2', name: 'x2', label: '穀物 B', coeff: 8, type: 'continuous' }
+        ];
+        appState.constraints = [
+          { id: 'c1', name: '蛋白質最低門檻', coeffs: [2, 4], op: '>=', rhs: 16 },
+          { id: 'c2', name: '維生素最低門檻', coeffs: [4, 2], op: '>=', rhs: 16 }
+        ];
+      }
+
+      document.getElementById('chk-non-negative').checked = appState.nonNegative;
+      switchTab('general');
+      syncOptButtons();
+      renderVariables();
+      handleSolveGeneral();
+      showToast('已載入教學案例並完成求解！', 'success');
+    }
+
+    function parseNaturalLanguage(text) {
+      let rawText = (text || '').trim();
+      if (!rawText) {
+        // Fill default sample text if empty so clicking the button always works
+        rawText = '我想最大化利潤，有兩種產品 A 和 B。產品A利潤 30 元，產品B利潤 40 元。原料限制：2A + 3B <= 60，工時限制：4A + 2B <= 80';
+        document.getElementById('nl-input-text').value = rawText;
+      }
+
+      const normalized = rawText
+        .replace(/≤/g, '<=')
+        .replace(/≥/g, '>=')
+        .replace(/＝/g, '=');
+
+      const isMin = /最小化|成本最低|最低成本|花費最少|\bmin\b/i.test(normalized);
+      appState.optType = isMin ? 'min' : 'max';
+      appState.nonNegative = !/無正負|可為負|unrestricted/i.test(normalized);
+      document.getElementById('chk-non-negative').checked = appState.nonNegative;
+
+      const isBinary = /0-1|二元|binary/i.test(normalized);
+      const isInt = !isBinary && /整數|integer/i.test(normalized);
+      const defaultVarType = isBinary ? 'binary' : (isInt ? 'integer' : 'continuous');
+
+      // Detect variable count from x1, x2, x3... or A, B, C...
+      let numVars = 2;
+      const xMatches = [...normalized.matchAll(/x_?(\d+)/gi)];
+      if (xMatches.length > 0) {
+        xMatches.forEach(m => {
+          numVars = Math.max(numVars, parseInt(m[1]));
+        });
+      } else if (/[C丙]/i.test(normalized) && /\d+\s*[C丙]/i.test(normalized)) {
+        numVars = 3;
+      }
+      numVars = Math.min(8, Math.max(2, numVars));
+
+      // Parse objective coefficients
+      const objCoeffs = new Array(numVars).fill(0);
+      // 1) Try algebraic objective: max Z = 20x1 + 15x2 or 30A + 40B
+      const objFormulaMatch = normalized.match(/(?:max|min|Z\s*=)[^,，\n;；]*?([+-]?\s*\d+(?:\.\d+)?\s*(?:x_?\d+|[A-D甲乙丙丁])(?:\s*[+-]\s*\d*(?:\.\d+)?\s*(?:x_?\d+|[A-D甲乙丙丁]))+)/i);
+      if (objFormulaMatch) {
+        const terms = [...objFormulaMatch[1].matchAll(/([+-]?\s*\d*(?:\.\d+)?)\s*(?:x_?(\d+)|([A-D])|([甲乙丙丁]))/gi)];
+        terms.forEach(t => {
+          let coefStr = t[1].replace(/\s+/g, '');
+          let coef = (coefStr === '' || coefStr === '+') ? 1 : (coefStr === '-' ? -1 : parseFloat(coefStr));
+          let idx = 0;
+          if (t[2]) idx = parseInt(t[2]) - 1;
+          else if (t[3]) idx = t[3].toUpperCase().charCodeAt(0) - 65;
+          else if (t[4]) idx = '甲乙丙丁'.indexOf(t[4]);
+          if (idx >= 0 && idx < numVars && !isNaN(coef)) objCoeffs[idx] = coef;
+        });
+      } else {
+        // 2) Natural language patterns like "產品A利潤 30" or "x1係數 20"
+        const varTokens = [
+          /(?:x_?1|產品\s*[A1甲]|[A甲]\s*(?:的)?(?:利潤|成本|係數|效益|價格|淨現值))[^0-9,，。;；\n<>=+-]{0,8}(\d+(?:\.\d+)?)/i,
+          /(?:x_?2|產品\s*[B2乙]|[B乙]\s*(?:的)?(?:利潤|成本|係數|效益|價格|淨現值))[^0-9,，。;；\n<>=+-]{0,8}(\d+(?:\.\d+)?)/i,
+          /(?:x_?3|產品\s*[C3丙]|[C丙]\s*(?:的)?(?:利潤|成本|係數|效益|價格|淨現值))[^0-9,，。;；\n<>=+-]{0,8}(\d+(?:\.\d+)?)/i
+        ];
+        varTokens.forEach((regex, idx) => {
+          if (idx < numVars) {
+            const m = normalized.match(regex);
+            if (m) objCoeffs[idx] = parseFloat(m[1]);
+          }
+        });
+      }
+
+      if (objCoeffs.every(c => c === 0)) {
+        objCoeffs[0] = 30;
+        objCoeffs[1] = 40;
+      }
+
+      appState.variables = [];
+      for (let i = 0; i < numVars; i++) {
+        appState.variables.push({
+          id: 'v' + (i + 1),
+          name: 'x' + (i + 1),
+          label: `產品 ${String.fromCharCode(65 + i)}`,
+          coeff: objCoeffs[i],
+          type: defaultVarType
+        });
+      }
+
+      // Parse algebraic constraints: e.g. "原料限制：2A + 3B <= 60" or "2x1 + x2 <= 20"
+      const parsedConstraints = [];
+      const segments = normalized.split(/[,，;；\n]+/);
+      segments.forEach(seg => {
+        const ineqMatch = seg.match(/(?:([^:：]+)[:：])?\s*([+-]?\s*\d*(?:\.\d+)?\s*(?:x_?\d+|[A-D甲乙丙丁])(?:\s*[+-]\s*\d*(?:\.\d+)?\s*(?:x_?\d+|[A-D甲乙丙丁]))*)\s*(<=|>=|=)\s*([+-]?\d+(?:\.\d+)?)/i);
+        if (ineqMatch) {
+          const rawName = (ineqMatch[1] || '').trim();
+          const lhsExpr = ineqMatch[2];
+          const op = ineqMatch[3];
+          const rhs = parseFloat(ineqMatch[4]);
+
+          // Skip simple non-negativity like x1 >= 0
+          const termMatches = [...lhsExpr.matchAll(/([+-]?\s*\d*(?:\.\d+)?)\s*(?:x_?(\d+)|([A-D])|([甲乙丙丁]))/gi)];
+          if (termMatches.length === 1 && rhs === 0 && op === '>=') return;
+
+          const coeffs = new Array(numVars).fill(0);
+          termMatches.forEach(t => {
+            let coefStr = t[1].replace(/\s+/g, '');
+            let coef = (coefStr === '' || coefStr === '+') ? 1 : (coefStr === '-' ? -1 : parseFloat(coefStr));
+            let idx = 0;
+            if (t[2]) idx = parseInt(t[2]) - 1;
+            else if (t[3]) idx = t[3].toUpperCase().charCodeAt(0) - 65;
+            else if (t[4]) idx = '甲乙丙丁'.indexOf(t[4]);
+            if (idx >= 0 && idx < numVars && !isNaN(coef)) {
+              coeffs[idx] += coef;
+            }
+          });
+
+          if (coeffs.some(c => c !== 0)) {
+            parsedConstraints.push({
+              id: 'c' + (parsedConstraints.length + 1),
+              name: rawName.replace(/^(subject\s*to|s\.t\.)\s*/i, '') || `限制式 ${parsedConstraints.length + 1}`,
+              coeffs: coeffs,
+              op: op,
+              rhs: rhs
+            });
+          }
+        }
+      });
+
+      if (parsedConstraints.length > 0) {
+        appState.constraints = parsedConstraints;
+      } else {
+        appState.constraints = [
+          { id: 'c1', name: '資源限制 1', coeffs: [2, 3, ...new Array(Math.max(0, numVars - 2)).fill(1)], op: '<=', rhs: 60 },
+          { id: 'c2', name: '資源限制 2', coeffs: [4, 2, ...new Array(Math.max(0, numVars - 2)).fill(1)], op: '<=', rhs: 80 }
+        ];
+      }
+
+      switchTab('general');
+      syncOptButtons();
+      renderVariables();
+      handleSolveGeneral();
+      showToast(`已成功解析 ${appState.variables.length} 個變數與 ${appState.constraints.length} 條限制式並完成求解！`, 'success');
+    }
+
+    // ==========================================
+    // 10. Navigation & Event Initialization
+    // ==========================================
+    function switchTab(tab) {
+      const tabs = ['general', 'transport', 'assignment', 'ai'];
+      tabs.forEach(t => {
+        const sec = document.getElementById(`section-${t}`);
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (t === tab) {
+          sec.classList.remove('hidden');
+          btn.className = 'px-3.5 py-1.5 rounded-lg transition-all duration-150 bg-white text-blue-900 font-semibold shadow-sm';
+        } else {
+          sec.classList.add('hidden');
+          btn.className = 'px-3.5 py-1.5 rounded-lg transition-all duration-150 text-blue-100 hover:text-white hover:bg-white/10';
+        }
+      });
+    }
+
+    function syncOptButtons() {
+      const btnMax = document.getElementById('btn-opt-max');
+      const btnMin = document.getElementById('btn-opt-min');
+      if (appState.optType === 'max') {
+        btnMax.className = 'py-1.5 rounded-lg bg-blue-600 text-white shadow-sm transition';
+        btnMin.className = 'py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition';
+      } else {
+        btnMin.className = 'py-1.5 rounded-lg bg-blue-600 text-white shadow-sm transition';
+        btnMax.className = 'py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition';
+      }
+    }
+
+    // Window Init
+    window.onload = function() {
+      // Tab Listeners
+      document.getElementById('tab-btn-general').onclick = () => switchTab('general');
+      document.getElementById('tab-btn-transport').onclick = () => {
+        switchTab('transport');
+        renderTransportationGrid();
+        buildTransportationLPModel();
+        solveTransportationModel();
+      };
+      document.getElementById('tab-btn-assignment').onclick = () => {
+        switchTab('assignment');
+        renderAssignmentGrid();
+        solveAssignmentModel();
+      };
+      document.getElementById('tab-btn-ai').onclick = () => switchTab('ai');
+
+      // General Controls
+      document.getElementById('btn-opt-max').onclick = () => {
+        appState.optType = 'max';
+        syncOptButtons();
+        updateMathPreview();
+        handleSolveGeneral();
+      };
+      document.getElementById('btn-opt-min').onclick = () => {
+        appState.optType = 'min';
+        syncOptButtons();
+        updateMathPreview();
+        handleSolveGeneral();
+      };
+      document.getElementById('chk-non-negative').onchange = (e) => {
+        appState.nonNegative = e.target.checked;
+        updateMathPreview();
+        handleSolveGeneral();
+      };
+      document.getElementById('btn-add-var').onclick = addVariable;
+      document.getElementById('btn-add-constraint').onclick = addConstraint;
+      document.getElementById('btn-solve-general').onclick = () => {
+        handleSolveGeneral();
+        showToast('已完成線性規劃求解運算！', 'success');
+      };
+
+      // Presets
+      document.getElementById('btn-load-ex1').onclick = () => loadPresetCase('case1');
+      document.getElementById('btn-load-ex2').onclick = () => {
+        appState.optType = 'max';
+        appState.nonNegative = true;
+        document.getElementById('chk-non-negative').checked = true;
+        appState.variables = [
+          { id: 'v1', name: 'x1', label: '標準型商品', coeff: 40, type: 'continuous' },
+          { id: 'v2', name: 'x2', label: '豪華型商品', coeff: 50, type: 'continuous' }
+        ];
+        appState.constraints = [
+          { id: 'c1', name: '機台工時限制', coeffs: [1, 2], op: '<=', rhs: 40 },
+          { id: 'c2', name: '勞力工時限制', coeffs: [4, 3], op: '<=', rhs: 120 },
+          { id: 'c3', name: '包裝限制', coeffs: [3, 1], op: '<=', rhs: 90 }
+        ];
+        syncOptButtons();
+        renderVariables();
+        handleSolveGeneral();
+        showToast('已載入 3 限制式生產資源最佳化案例！', 'success');
+      };
+      document.getElementById('btn-load-ex3').onclick = () => loadPresetCase('case2');
+      document.getElementById('btn-reset-general').onclick = () => {
+        appState.variables = [
+          { id: 'v1', name: 'x1', label: '變數 1', coeff: 0, type: 'continuous' },
+          { id: 'v2', name: 'x2', label: '變數 2', coeff: 0, type: 'continuous' }
+        ];
+        appState.constraints = [
+          { id: 'c1', name: '限制式 1', coeffs: [0, 0], op: '<=', rhs: 0 }
+        ];
+        appState.lastResult = null;
+        renderVariables();
+        clearAnalysisTables(true);
+        showToast('已清空重設通用線性規劃模型', 'info');
+      };
+
+      // Transportation listeners
+      document.getElementById('btn-load-trans-example').onclick = () => {
+        transState.numSources = 3;
+        transState.numDests = 4;
+        transState.sourceNames = ['S1 (倉庫1)', 'S2 (倉庫2)', 'S3 (倉庫3)'];
+        transState.destNames = ['市場 A', '市場 B', '市場 C', '市場 D'];
+        transState.costs = [
+          [16, 18, 11, 20],
+          [14, 12, 13, 17],
+          [13, 15, 17, 18]
+        ];
+        transState.supply = [300, 300, 200];
+        transState.demand = [150, 250, 200, 200];
+        document.getElementById('trans-num-sources').value = 3;
+        document.getElementById('trans-num-dests').value = 4;
+        renderTransportationGrid();
+        buildTransportationLPModel();
+        solveTransportationModel();
+        showToast('已載入講義第 8 頁 3×4 運輸問題範例並完成求解！', 'success');
+      };
+
+      document.getElementById('btn-trans-resize').onclick = () => {
+        const m = parseInt(document.getElementById('trans-num-sources').value) || 3;
+        const n = parseInt(document.getElementById('trans-num-dests').value) || 4;
+        transState.numSources = Math.max(1, Math.min(10, m));
+        transState.numDests = Math.max(1, Math.min(10, n));
+
+        while (transState.sourceNames.length < transState.numSources) {
+          const idx = transState.sourceNames.length + 1;
+          transState.sourceNames.push(`S${idx} (倉庫${idx})`);
+        }
+        while (transState.destNames.length < transState.numDests) {
+          const idx = transState.destNames.length;
+          transState.destNames.push(`市場 ${String.fromCharCode(65 + idx)}`);
+        }
+
+        const newCosts = [];
+        for (let i = 0; i < transState.numSources; i++) {
+          newCosts[i] = [];
+          for (let j = 0; j < transState.numDests; j++) {
+            newCosts[i][j] = (transState.costs[i] && transState.costs[i][j] !== undefined) ? transState.costs[i][j] : 12;
+          }
+        }
+        transState.costs = newCosts;
+
+        while (transState.supply.length < transState.numSources) transState.supply.push(200);
+        transState.supply = transState.supply.slice(0, transState.numSources);
+
+        while (transState.demand.length < transState.numDests) transState.demand.push(150);
+        transState.demand = transState.demand.slice(0, transState.numDests);
+
+        renderTransportationGrid();
+        buildTransportationLPModel();
+        solveTransportationModel();
+        showToast(`已更新為 ${transState.numSources} × ${transState.numDests} 運輸問題表格！`, 'info');
+      };
+
+      document.getElementById('btn-reset-trans').onclick = () => {
+        transState.costs = transState.costs.map(row => row.map(() => 0));
+        transState.supply = transState.supply.map(() => 0);
+        transState.demand = transState.demand.map(() => 0);
+        renderTransportationGrid();
+        document.getElementById('trans-math-preview').textContent = '請輸入資料後點擊「自動建立線性規劃模型」。';
+        document.getElementById('trans-total-cost').textContent = '--';
+        document.getElementById('trans-shipment-tbody').innerHTML = '<tr><td colspan="6" class="py-4 text-center text-slate-400 font-sans">尚未執行求解</td></tr>';
+        document.getElementById('trans-sources-analysis').innerHTML = '<span class="text-slate-400">尚未計算</span>';
+        document.getElementById('trans-dests-analysis').innerHTML = '<span class="text-slate-400">尚未計算</span>';
+        document.getElementById('trans-managerial-summary').textContent = '尚未產生分析。';
+        showToast('已清空重設運輸問題表格', 'info');
+      };
+
+      document.getElementById('btn-trans-build-model').onclick = () => {
+        buildTransportationLPModel();
+        showToast('已自動生成運輸問題 LP 數學模型！', 'info');
+      };
+      document.getElementById('btn-trans-solve').onclick = () => {
+        solveTransportationModel();
+        showToast('已完成運輸問題最佳配銷求解！', 'success');
+      };
+
+      // Assignment listeners
+      document.getElementById('assign-size-select').onchange = (e) => {
+        const sz = parseInt(e.target.value) || 4;
+        assignState.size = sz;
+        const sampleMatrices = {
+          3: [[8, 4, 7], [5, 2, 3], [9, 6, 4]],
+          4: [[9, 2, 7, 8], [6, 4, 3, 7], [5, 8, 1, 8], [7, 6, 9, 4]],
+          5: [[9, 2, 7, 8, 6], [6, 4, 3, 7, 5], [5, 8, 1, 8, 4], [7, 6, 9, 4, 3], [4, 7, 5, 6, 2]]
+        };
+        assignState.matrix = JSON.parse(JSON.stringify(sampleMatrices[sz] || sampleMatrices[4]));
+        assignState.lastSolution = null;
+        renderAssignmentGrid();
+        solveAssignmentModel();
+      };
+      document.getElementById('assign-opt-select').onchange = (e) => {
+        assignState.optType = e.target.value;
+        solveAssignmentModel();
+      };
+      document.getElementById('btn-load-assign-example').onclick = () => {
+        assignState.size = 4;
+        assignState.optType = 'min';
+        document.getElementById('assign-size-select').value = '4';
+        document.getElementById('assign-opt-select').value = 'min';
+        assignState.matrix = [
+          [9, 2, 7, 8],
+          [6, 4, 3, 7],
+          [5, 8, 1, 8],
+          [7, 6, 9, 4]
+        ];
+        assignState.lastSolution = null;
+        renderAssignmentGrid();
+        solveAssignmentModel();
+        showToast('已載入 4×4 專案團隊指派範例並完成求解！', 'success');
+      };
+      document.getElementById('btn-reset-assign').onclick = () => {
+        assignState.matrix = assignState.matrix.map(row => row.map(() => 0));
+        assignState.lastSolution = null;
+        renderAssignmentGrid();
+        document.getElementById('assign-total-cost').textContent = '--';
+        document.getElementById('assign-results-list').innerHTML = '<span class="text-slate-400">請輸入成本/效益後點擊求解</span>';
+        showToast('已清空重設指派問題矩陣', 'info');
+      };
+      document.getElementById('btn-assign-solve').onclick = () => {
+        solveAssignmentModel();
+        showToast('已完成最佳指派求解！', 'success');
+      };
+
+      // AI parser listeners
+      document.getElementById('btn-nl-fill-sample').onclick = () => {
+        document.getElementById('nl-input-text').value = '我想最大化利潤，有兩種產品 A 和 B。產品A利潤 30 元，產品B利潤 40 元。原料限制：2A + 3B <= 60，工時限制：4A + 2B <= 80';
+        showToast('已填入範例文字，請點擊「解析文字並載入計算器求解」', 'info');
+      };
+      document.getElementById('btn-nl-parse').onclick = () => {
+        const txt = document.getElementById('nl-input-text').value;
+        parseNaturalLanguage(txt);
+      };
+
+      // Initial render & solve
+      renderVariables();
+      handleSolveGeneral();
+    };
+  </script>
+</body>
+</html>

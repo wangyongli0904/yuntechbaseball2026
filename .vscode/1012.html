@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>線性規劃計算器</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+    .btn-ctrl { padding: 4px 10px; font-size: 16px; cursor: pointer; font-weight: bold; }
+    .input-num { width: 55px; text-align: right; padding: 3px; }
+  </style>
+</head>
+<body>
+  <h1>線性規劃計算器</h1>
+  <hr>
+
+  <h3>第一步：選擇一個問題類型</h3>
+  <select id="opType" style="padding: 5px; font-size: 16px;">
+    <option value="max">最大化 (max)</option>
+    <option value="min">最小化 (min)</option>
+  </select>
+
+  <div style="margin-top: 15px;">
+    <strong>設定決策變數數量：</strong>
+    <button class="btn-ctrl" onclick="changeVarCount(-1)">－</button>
+    <span id="varCountText" style="font-size: 18px; font-weight: bold; margin: 0 8px;">2</span>
+    <button class="btn-ctrl" onclick="changeVarCount(1)">＋</button>
+  </div>
+
+  <div style="margin-top: 10px;">
+    <strong>設定限制式數量：</strong>
+    <button class="btn-ctrl" onclick="changeConCount(-1)">－</button>
+    <span id="conCountText" style="font-size: 18px; font-weight: bold; margin: 0 8px;">2</span>
+    <button class="btn-ctrl" onclick="changeConCount(1)">＋</button>
+  </div>
+
+  <h3>第二步：目標函數</h3>
+  <div id="objContainer"></div>
+
+  <h3>第三步：限制式 (預設所有變數 Xᵢ &ge; 0)</h3>
+  <div id="constraintsContainer"></div>
+
+  <br>
+  <button onclick="calculate()" style="padding: 10px 24px; font-size: 16px; cursor: pointer; background: #000; color: #fff; border: none; border-radius: 4px;">開始求解</button>
+
+  <hr style="margin-top: 20px;">
+  <h3>求解結果：</h3>
+  <div id="output" style="font-size: 20px; color: #da0f0f; font-weight: bold;">請點擊開始求解</div>
+
+  <script>
+  let varCount = 2;
+  const objValues = [20, 15];
+  const conData = [
+    { coeffs: [2, 1], op: "<=", rhs: 20 },
+    { coeffs: [1, 3], op: "<=", rhs: 35 }
+  ];
+
+  function render() {
+    document.getElementById("varCountText").innerText = varCount;
+    document.getElementById("conCountText").innerText = conData.length;
+    while (objValues.length < varCount) objValues.push(0);
+
+    document.getElementById("objContainer").innerHTML = "<strong>Z = </strong>" +
+      Array.from({ length: varCount }, (_, i) =>
+        `<input type="number" step="any" class="input-num" value="${objValues[i]}" oninput="objValues[${i}]=+this.value||0"> X<sub>${i + 1}</sub>`
+      ).join(" + ");
+
+    document.getElementById("constraintsContainer").innerHTML = conData.map((row, r) => {
+      while (row.coeffs.length < varCount) row.coeffs.push(0);
+      const terms = Array.from({ length: varCount }, (_, c) =>
+        `<input type="number" step="any" class="input-num" value="${row.coeffs[c]}" oninput="conData[${r}].coeffs[${c}]=+this.value||0"> X<sub>${c + 1}</sub>`
+      ).join(" + ");
+      const ops = [["<=", "&le;"], [">=", "&ge;"], ["=", "="]].map(([v, t]) =>
+        `<option value="${v}" ${row.op === v ? "selected" : ""}>${t}</option>`
+      ).join("");
+      return `<p>限制式 ${r + 1}： ${terms} <select onchange="conData[${r}].op=this.value">${ops}</select> ` +
+             `<input type="number" step="any" class="input-num" value="${row.rhs}" oninput="conData[${r}].rhs=+this.value||0"></p>`;
+    }).join("");
+  }
+
+  function changeVarCount(d) {
+    if (varCount + d < 2) return alert("決策變數至少需要 2 個！");
+    varCount += d;
+    render();
+  }
+
+  function changeConCount(d) {
+    if (conData.length + d < 1) return alert("至少需要 1 條限制式！");
+    d > 0 ? conData.push({ coeffs: Array(varCount).fill(0), op: "<=", rhs: 0 }) : conData.pop();
+    render();
+  }
+
+  function solveLP(opType, n, obj, cons) {
+    const EPS = 1e-8, m = cons.length;
+    const norm = cons.map(({ coeffs, op, rhs }) => {
+      let b = +rhs || 0, c = coeffs.slice(0, n).map(v => +v || 0);
+      if (b < 0) { b = -b; c = c.map(v => -v); op = op === "<=" ? ">=" : op === ">=" ? "<=" : "="; }
+      return { c, op, b };
+    });
+
+    let totalCols = n, colIdx = n, artCols = [], basis = [];
+    norm.forEach(r => totalCols += r.op === ">=" ? 2 : 1);
+
+    const tab = norm.map(r => {
+      const row = Array(totalCols + 1).fill(0);
+      r.c.forEach((v, j) => row[j] = v);
+      if (r.op === "<=") { row[colIdx] = 1; basis.push(colIdx++); }
+      else {
+        if (r.op === ">=") row[colIdx++] = -1;
+        row[colIdx] = 1; basis.push(colIdx); artCols.push(colIdx++);
+      }
+      row[totalCols] = r.b;
+      return row;
+    });
+
+    const simplex = (objRow, mask) => {
+      basis.forEach((bCol, i) => {
+        const f = objRow[bCol];
+        if (Math.abs(f) > EPS) for (let j = 0; j <= totalCols; j++) objRow[j] -= f * tab[i][j];
+      });
+      tab.push(objRow);
+      for (let iter = 0; iter < 1000; iter++) {
+        let pCol = -1, minVal = -EPS;
+        for (let j = 0; j < totalCols; j++) {
+          if (mask[j] && objRow[j] < minVal) { minVal = objRow[j]; pCol = j; }
+        }
+        if (pCol === -1) { tab.pop(); return "OPTIMAL"; }
+
+        let pRow = -1, minRatio = Infinity;
+        for (let i = 0; i < m; i++) {
+          if (tab[i][pCol] > EPS) {
+            const ratio = tab[i][totalCols] / tab[i][pCol];
+            if (ratio < minRatio - EPS) { minRatio = ratio; pRow = i; }
+          }
+        }
+        if (pRow === -1) { tab.pop(); return "UNBOUNDED"; }
+
+        const pVal = tab[pRow][pCol];
+        for (let j = 0; j <= totalCols; j++) tab[pRow][j] /= pVal;
+        for (let i = 0; i <= m; i++) {
+          if (i !== pRow && Math.abs(tab[i][pCol]) > EPS) {
+            const f = tab[i][pCol];
+            for (let j = 0; j <= totalCols; j++) tab[j] ? (tab[i][j] -= f * tab[pRow][j]) : (tab[i][j] -= f * tab[pRow][j]);
+          }
+        }
+        basis[pRow] = pCol;
+      }
+      tab.pop();
+      return "LIMIT";
+    };
+
+    if (artCols.length) {
+      const p1Row = Array(totalCols + 1).fill(0);
+      artCols.forEach(c => p1Row[c] = 1);
+      if (simplex(p1Row, Array(totalCols).fill(true)) !== "OPTIMAL" || Math.abs(p1Row[totalCols]) > 1e-5)
+        return { status: "INFEASIBLE" };
+    }
+
+    const p2Row = Array(totalCols + 1).fill(0);
+    for (let j = 0; j < n; j++) p2Row[j] = (opType === "max" ? -1 : 1) * (+obj[j] || 0);
+    const mask = Array(totalCols).fill(true);
+    artCols.forEach(c => mask[c] = false);
+
+    const status = simplex(p2Row, mask);
+    if (status !== "OPTIMAL") return { status };
+
+    const vars = Array(n).fill(0);
+    basis.forEach((bCol, i) => { if (bCol < n) vars[bCol] = tab[i][totalCols]; });
+    const z = vars.reduce((sum, v, j) => sum + v * (+obj[j] || 0), 0);
+    return { status: "OPTIMAL", vars, z };
+  }
+
+  function calculate() {
+    const res = solveLP(document.getElementById("opType").value, varCount, objValues, conData);
+    const out = document.getElementById("output");
+    if (res.status === "OPTIMAL") {
+      const vars = res.vars.map((v, i) => `最佳解 X<sub>${i + 1}</sub>* = ${Math.round(v * 1e4) / 1e4}`).join("<br>");
+      out.innerHTML = `${vars}<br>最佳目標值 Z* = ${Math.round(res.z * 1e4) / 1e4}`;
+    } else {
+      const msg = { INFEASIBLE: "無可行解！", UNBOUNDED: "無界解，目標值可無限延伸！" }[res.status] || "求解失敗或超過迭代上限！";
+      out.innerHTML = `<span style="color:red;">此問題${msg}</span>`;
+    }
+  }
+
+  render();
+  </script>
+</body>
+</html>
