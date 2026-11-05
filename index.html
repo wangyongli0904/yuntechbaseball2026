@@ -3,9 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>2026 雲科棒球隊 - 球員資料庫與比賽管理系統</title>
+  <title>2026 雲科棒球隊 - 球員資料庫與比賽管理系統 (雲端即時版)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <style>
     body { background-color: #0b1120; color: #f1f5f9; font-family: 'Segoe UI', system-ui, sans-serif; }
     .glass { background: rgba(30, 41, 59, 0.78); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.08); }
@@ -52,7 +56,10 @@
           <i class="fa-solid fa-baseball-bat-ball"></i>
         </div>
         <div>
-          <h1 class="text-lg md:text-xl font-black tracking-wide text-white">雲科棒球隊 球員資料庫系統</h1>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg md:text-xl font-black tracking-wide text-white">雲科棒球隊 球員資料庫系統</h1>
+            <span id="cloudStatusBadge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400">本機模式</span>
+          </div>
           <p class="text-xs text-slate-400">National Yunlin University of Science and Technology Baseball</p>
         </div>
       </div>
@@ -71,6 +78,12 @@
         <button onclick="openPlayerFormModal('add')" class="px-3.5 py-2 rounded-lg text-sm font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 shadow">
           <i class="fa-solid fa-user-plus mr-1"></i>新增球員
         </button>
+
+        <!-- 雲端管理員登入按鈕 -->
+        <button id="authBtn" onclick="openCloudAuthModal()" class="px-3.5 py-2 rounded-lg text-sm font-bold bg-sky-600 hover:bg-sky-500 text-white shadow">
+          <i class="fa-solid fa-cloud-arrow-up mr-1"></i>管理員登入 / 雲端設定
+        </button>
+
         <button onclick="exportDataJSON()" title="匯出備份" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
           <i class="fa-solid fa-download"></i>
         </button>
@@ -92,7 +105,7 @@
       <div class="glass rounded-xl p-4">
         <div class="text-xs text-slate-400">登錄球員總數</div>
         <div class="text-2xl font-black text-white mt-1"><span id="stat-total">0</span> <span class="text-xs font-normal text-slate-400">人</span></div>
-        <div class="text-xs text-emerald-400 mt-1">雲科棒球隊</div>
+        <div class="text-xs text-emerald-400 mt-1" id="roleHintText">雲科棒球隊</div>
       </div>
       <div class="glass rounded-xl p-4">
         <div class="text-xs text-slate-400">投手 / 野手 / 雙刀流</div>
@@ -111,7 +124,7 @@
       </div>
     </section>
 
-    <!-- ==================== 分頁 1：球員資料庫 ==================== -->
+    <!-- 分頁 1：球員資料庫 -->
     <section id="view-roster" class="space-y-4">
       <div class="glass rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-2 flex-1">
@@ -152,20 +165,17 @@
         </div>
       </div>
 
-      <!-- 空資料提示 -->
       <div id="emptyRosterBox" class="hidden glass rounded-2xl p-12 text-center space-y-4">
         <div class="text-5xl text-emerald-400"><i class="fa-solid fa-baseball"></i></div>
         <h3 class="text-xl font-bold text-white">目前雲科棒球隊資料庫尚無球員</h3>
-        <p class="text-sm text-slate-400 max-w-md mx-auto">點擊下方按鈕新增第一位球員，支援多守位設定、雙刀流投打數據，以及單場比賽即時連動統計。</p>
+        <p class="text-sm text-slate-400 max-w-md mx-auto">點擊下方按鈕新增第一位球員，若已設定 Firebase 雲端連線，所有隊員打開網址都能即時看到最新數據！</p>
         <button onclick="openPlayerFormModal('add')" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm">
           <i class="fa-solid fa-plus mr-1"></i>立即新增第一位雲科球員
         </button>
       </div>
 
-      <!-- 卡片列表 -->
       <div id="rosterCardsContainer" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
 
-      <!-- 完整 20 項打擊數據 + 投球數據表格 -->
       <div id="rosterTableContainer" class="glass rounded-xl overflow-x-auto">
         <table class="w-full text-left border-collapse text-xs whitespace-nowrap">
           <thead>
@@ -206,9 +216,8 @@
       </div>
     </section>
 
-    <!-- ==================== 分頁 2：守備與先發打序 (球員與守位絕不重複) ==================== -->
+    <!-- 分頁 2：守備與先發打序 -->
     <section id="view-tactics" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <!-- 球場視覺圖 -->
       <div class="lg:col-span-5 glass rounded-2xl p-5 flex flex-col justify-between">
         <div>
           <div class="flex items-center justify-between mb-3">
@@ -223,12 +232,11 @@
         </div>
         <div class="text-xs text-slate-400 bg-slate-900/70 rounded-xl p-3 border border-slate-800 space-y-1">
           <div>💡 <b>防分身與守位唯一規則：</b></div>
-          <div>1. 球場上 9 個守位（含投手 `P`）<b>絕對不會出現同一個人守兩個位置</b>。若將某球員從 `P` 改派至 `1B`，系統會自動清空原本的 `P`。</div>
-          <div>2. 1~9 棒打擊序中<b>人員與守位皆不可重複</b>（僅二刀流投手 `P` 可在打序中擔任 `P` 或 `DH` 打擊）。</div>
+          <div>1. 球場上 9 個守位（含投手 `P`）<b>絕對不會出現同一個人守兩個位置</b>。</div>
+          <div>2. 1~9 棒打擊序中<b>人員與守位皆不可重複</b>。</div>
         </div>
       </div>
 
-      <!-- 1~9 棒先發打序 -->
       <div class="lg:col-span-7 glass rounded-2xl p-5 space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -244,16 +252,12 @@
             </button>
           </div>
         </div>
-
-        <!-- 9 大守位唯一性狀態列 -->
         <div id="lineupPosCheckBar" class="flex flex-wrap gap-1.5 p-2.5 rounded-xl bg-slate-900/90 border border-slate-800"></div>
-
-        <!-- 1~9 棒列表 -->
         <div id="battingOrderList" class="space-y-2"></div>
       </div>
     </section>
 
-    <!-- ==================== 分頁 3：單場比賽與局數中守備替換 ==================== -->
+    <!-- 分頁 3：單場比賽與局數中守備替換 -->
     <section id="view-games" class="hidden space-y-6">
       <div class="glass rounded-2xl p-5 flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-3">
@@ -275,12 +279,11 @@
 
       <div id="noGameSelectedBox" class="glass rounded-2xl p-10 text-center space-y-3">
         <p class="text-slate-300 font-bold">尚未建立任何比賽場次</p>
-        <p class="text-xs text-slate-400">建立比賽後，可在各局數中隨時替換守備位置、換代打或換投，所有單場打擊/投球成績將自動累加至球員總數據！</p>
+        <p class="text-xs text-slate-400">建立比賽後，可在各局數中隨時替換守備位置、換代打或換投，所有單場成績將自動累加至球員總數據！</p>
         <button onclick="openNewGameModal()" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-bold">立即建立第一場比賽</button>
       </div>
 
       <div id="activeGameWorkspace" class="hidden space-y-6">
-        <!-- 計分板與局數調度控制器 -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
           <div class="lg:col-span-7 glass rounded-2xl p-4 overflow-x-auto">
             <div class="flex items-center justify-between mb-2">
@@ -301,7 +304,6 @@
             </table>
           </div>
 
-          <!-- 局數中替換守備 / 代打 / 換投 面板 -->
           <div class="lg:col-span-5 glass rounded-2xl p-4 space-y-3">
             <div class="flex items-center justify-between">
               <h3 class="text-sm font-black text-amber-400"><i class="fa-solid fa-repeat mr-1"></i>比賽局數中：替換守備 / 代打 / 換投</h3>
@@ -338,7 +340,7 @@
                 <select id="subIncomingPlayer" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></select>
               </div>
               <div id="subNewPosBox">
-                <label class="text-slate-400 block mb-1">擔任守備位置 (自動防重複)</label>
+                <label class="text-slate-400 block mb-1">擔任守備位置</label>
                 <select id="subNewPosition" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></select>
               </div>
             </div>
@@ -349,10 +351,9 @@
           </div>
         </div>
 
-        <!-- 本場打擊紀錄表 -->
         <div class="glass rounded-2xl p-4 space-y-3 overflow-x-auto">
           <div class="flex items-center justify-between">
-            <h3 class="text-sm font-black text-white"><i class="fa-solid fa-baseball-bat-ball text-emerald-400 mr-1.5"></i>本場打擊與守位即時紀錄表 (修改數值立即同步至球員生涯數據)</h3>
+            <h3 class="text-sm font-black text-white"><i class="fa-solid fa-baseball-bat-ball text-emerald-400 mr-1.5"></i>本場打擊與守位即時紀錄表</h3>
             <div class="flex items-center gap-2">
               <select id="addBatterToGameSelect" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white"></select>
               <button onclick="manualAddBatterToGame()" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-emerald-400 font-bold">+ 新增出賽野手</button>
@@ -361,9 +362,7 @@
           <table class="w-full text-left text-xs border-collapse whitespace-nowrap">
             <thead>
               <tr class="bg-slate-900 text-slate-300 border-b border-slate-700">
-                <th class="p-2">棒次</th>
-                <th class="p-2">球員</th>
-                <th class="p-2">目前守位 / 本場守位歷程</th>
+                <th class="p-2">棒次</th><th class="p-2">球員</th><th class="p-2">本場守位歷程</th>
                 <th class="p-1.5 text-center">PA</th><th class="p-1.5 text-center">AB</th><th class="p-1.5 text-center">R</th>
                 <th class="p-1.5 text-center text-emerald-400">H</th><th class="p-1.5 text-center">2B</th><th class="p-1.5 text-center">3B</th>
                 <th class="p-1.5 text-center text-amber-400">HR</th><th class="p-1.5 text-center">RBI</th><th class="p-1.5 text-center">BB</th>
@@ -375,11 +374,10 @@
           </table>
         </div>
 
-        <!-- 本場投手紀錄與局數異動日誌 -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
           <div class="lg:col-span-7 glass rounded-2xl p-4 space-y-3 overflow-x-auto">
             <div class="flex items-center justify-between">
-              <h3 class="text-sm font-black text-white"><i class="fa-solid fa-fire-flame-curved text-rose-400 mr-1.5"></i>本場登板投手數據 (IP 支援 .1 / .2 三進位)</h3>
+              <h3 class="text-sm font-black text-white"><i class="fa-solid fa-fire-flame-curved text-rose-400 mr-1.5"></i>本場登板投手數據</h3>
               <div class="flex items-center gap-2">
                 <select id="addPitcherToGameSelect" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white"></select>
                 <button onclick="manualAddPitcherToGame()" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-rose-400 font-bold">+ 新增登板投手</button>
@@ -388,19 +386,13 @@
             <table class="w-full text-left text-xs border-collapse whitespace-nowrap">
               <thead>
                 <tr class="bg-slate-900 text-slate-300 border-b border-slate-700">
-                  <th class="p-2">投手</th>
-                  <th class="p-2 text-center">局數 IP</th>
-                  <th class="p-2 text-center">被安打 H</th>
-                  <th class="p-2 text-center">自責分 ER</th>
-                  <th class="p-2 text-center">四壞 BB</th>
-                  <th class="p-2 text-center">奪三振 SO</th>
-                  <th class="p-2 text-center">勝投 W</th>
+                  <th class="p-2">投手</th><th class="p-2 text-center">局數 IP</th><th class="p-2 text-center">被安打 H</th>
+                  <th class="p-2 text-center">自責分 ER</th><th class="p-2 text-center">四壞 BB</th><th class="p-2 text-center">奪三振 SO</th><th class="p-2 text-center">勝投 W</th>
                 </tr>
               </thead>
               <tbody id="gamePitchingTableBody" class="divide-y divide-slate-800"></tbody>
             </table>
           </div>
-
           <div class="lg:col-span-5 glass rounded-2xl p-4 space-y-2">
             <h3 class="text-sm font-black text-white"><i class="fa-solid fa-clock-rotate-left text-sky-400 mr-1.5"></i>本場局數守備替換與調度時間軸</h3>
             <div id="gameSubLogList" class="space-y-1.5 max-h-56 overflow-y-auto text-xs pr-1"></div>
@@ -410,17 +402,57 @@
     </section>
   </main>
 
-  <!-- ==================== 視窗 1：新增 / 編輯球員 Modal ==================== -->
+  <!-- ==================== 視窗 0：Firebase 雲端管理員登入 Modal ==================== -->
+  <div id="cloudAuthModal" class="fixed inset-0 bg-black/75 z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
+    <div class="glass bg-slate-900 rounded-2xl max-w-lg w-full p-6 space-y-4 border border-slate-700">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+        <h3 class="text-base font-black text-white"><i class="fa-solid fa-cloud text-sky-400 mr-1.5"></i>雲科棒球隊 雲端資料庫與管理員登入</h3>
+        <button onclick="closeCloudAuthModal()" class="text-slate-400 hover:text-white text-xl">&times;</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="bg-slate-950/90 p-3 rounded-xl border border-slate-800 space-y-2">
+          <div class="flex items-center justify-between">
+            <label class="font-bold text-emerald-400">步驟 1：Firebase 連線設定 (JSON 或物件內容)</label>
+            <button onclick="saveFirebaseConfigFromUI()" class="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-bold">儲存並連線</button>
+          </div>
+          <textarea id="fb-config-input" rows="4" placeholder='貼上你的 firebaseConfig，例如：{"apiKey":"...","projectId":"yuntech-baseball",...}' class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-200 font-mono text-[11px]"></textarea>
+          <p class="text-[11px] text-slate-400">💡 若你已經把 `firebaseConfig` 寫在程式碼第 392 行，這裡會自動帶入，全隊打開網址都會自動連上雲端！</p>
+        </div>
+
+        <div class="bg-slate-950/90 p-3 rounded-xl border border-slate-800 space-y-3">
+          <label class="font-bold text-amber-400 block">步驟 2：管理員帳號登入（登入後才可修改雲端資料）</label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="text-slate-400">管理員信箱 (Email)</label>
+              <input id="login-email" type="email" placeholder="wangyongli0904@gmail.com" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+            </div>
+            <div>
+              <label class="text-slate-400">密碼 (Password)</label>
+              <input id="login-password" type="password" placeholder="••••••••" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+            </div>
+          </div>
+          <div class="flex justify-between items-center pt-1">
+            <button onclick="pushLocalToCloudNow()" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 font-bold">
+              <i class="fa-solid fa-upload mr-1"></i>將目前本機資料強制覆蓋上雲端
+            </button>
+            <button onclick="handleFirebaseLogin()" class="px-5 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-black">
+              登入管理員
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 視窗 1：新增 / 編輯球員 Modal -->
   <div id="playerFormModal" class="fixed inset-0 bg-black/75 z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
     <div class="glass bg-slate-900 rounded-2xl max-w-4xl w-full p-6 space-y-5 max-h-[92vh] overflow-y-auto border border-slate-700">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <h3 id="modalTitle" class="text-lg font-black text-white">新增雲科棒球隊球員</h3>
         <button onclick="closePlayerFormModal()" class="text-slate-400 hover:text-white text-xl">&times;</button>
       </div>
-
       <input type="hidden" id="editPlayerId" />
-
-      <!-- 基本資料 -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
         <div>
           <label class="text-xs text-slate-400">球員姓名 *</label>
@@ -447,7 +479,6 @@
         </div>
       </div>
 
-      <!-- 多守位複選器 -->
       <div class="bg-slate-950/80 p-3.5 rounded-xl border border-slate-800 space-y-2">
         <div class="flex items-center justify-between">
           <label class="text-xs font-bold text-emerald-400">可守備位置（可複選多個守位，第一個點選為主守位）*</label>
@@ -456,11 +487,10 @@
         <div id="posMultiPicker" class="flex flex-wrap gap-2"></div>
       </div>
 
-      <!-- 20 項基礎打擊數據 -->
       <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-3">
         <div class="flex items-center justify-between">
-          <h4 class="text-xs font-black text-amber-400"><i class="fa-solid fa-baseball-bat-ball mr-1"></i>打擊基礎數據（若已有單場比賽紀錄，系統會自動疊加單場數據）</h4>
-          <span class="text-[11px] text-slate-400">AVG / OBP / SLG / OPS 自動依公式計算</span>
+          <h4 class="text-xs font-black text-amber-400"><i class="fa-solid fa-baseball-bat-ball mr-1"></i>打擊基礎數據</h4>
+          <span class="text-[11px] text-slate-400">AVG / OBP / SLG / OPS 自動計算</span>
         </div>
         <div class="grid grid-cols-4 sm:grid-cols-8 gap-2 text-xs">
           <div><label class="text-slate-400">出賽 G</label><input id="pf-g" type="number" min="0" value="0" oninput="recalcFormRates()" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-white"/></div>
@@ -488,11 +518,10 @@
         </div>
       </div>
 
-      <!-- 投球基礎數據 -->
       <div class="bg-slate-950/80 p-4 rounded-xl border border-slate-800 space-y-3">
         <div class="flex items-center justify-between">
-          <h4 class="text-xs font-black text-rose-400"><i class="fa-solid fa-baseball mr-1"></i>投球基礎數據（投手或雙刀流填寫，IP 支援 .1 / .2 三進位）</h4>
-          <span class="text-[11px] text-slate-400">ERA / WHIP 自動依局數計算</span>
+          <h4 class="text-xs font-black text-rose-400"><i class="fa-solid fa-baseball mr-1"></i>投球基礎數據（IP 支援 .1 / .2 三進位）</h4>
+          <span class="text-[11px] text-slate-400">ERA / WHIP 自動計算</span>
         </div>
         <div class="grid grid-cols-3 sm:grid-cols-7 gap-2 text-xs">
           <div><label class="text-slate-400">投球局數 IP</label><input id="pf-ip" type="number" step="0.1" min="0" value="0" oninput="recalcFormRates()" class="w-full bg-slate-900 border border-slate-700 rounded p-1.5 text-white"/></div>
@@ -515,7 +544,7 @@
     </div>
   </div>
 
-  <!-- ==================== 視窗 2：戰術盤指派球員 Modal ==================== -->
+  <!-- 視窗 2：戰術盤指派球員 Modal -->
   <div id="slotPickerModal" class="fixed inset-0 bg-black/75 z-50 hidden flex items-center justify-center p-4">
     <div class="glass bg-slate-900 rounded-2xl max-w-lg w-full p-5 space-y-4 border border-slate-700">
       <div class="flex items-center justify-between border-b border-slate-800 pb-2">
@@ -526,7 +555,7 @@
     </div>
   </div>
 
-  <!-- ==================== 視窗 3：新增比賽 Modal ==================== -->
+  <!-- 視窗 3：新增比賽 Modal -->
   <div id="newGameModal" class="fixed inset-0 bg-black/75 z-50 hidden flex items-center justify-center p-4">
     <div class="glass bg-slate-900 rounded-2xl max-w-md w-full p-5 space-y-4 border border-slate-700">
       <div class="flex items-center justify-between border-b border-slate-800 pb-2">
@@ -558,15 +587,30 @@
     </div>
   </div>
 
-  <!-- Toast 通知 -->
   <div id="toastBox" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
 
-  <!-- ==================== 完整 JavaScript 邏輯 ==================== -->
+  <!-- ==================== 完整 JavaScript + Firebase 即時雲端同步 ==================== -->
   <script>
+    // ★ 請將你在 Firebase 複製的設定貼在下方大括號內 (貼好推上 GitHub 後，全隊打開網址就會自動連上雲端)
+    const DEFAULT_FIREBASE_CONFIG = {
+      apiKey: "AIzaSyByQPVgiB3PpS4ANtjGzry0dkBbe49EY7Y",
+      authDomain: "yuntechbaseball-b1cf1.firebaseapp.com",
+      projectId: "yuntechbaseball-b1cf1",
+      storageBucket: "yuntechbaseball-b1cf1.firebasestorage.app",
+      messagingSenderId: "246491206941",
+      appId: "1:246491206941:web:c84238f87ef930f9253df4"
+    };
+
     const STORAGE_KEY = 'YUNTECH_BASEBALL_2026_V5';
+    const FB_CONFIG_STORAGE_KEY = 'YUNTECH_FB_CONFIG_2026';
     const ALL_POSITIONS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH', 'TWP'];
     const LINEUP_9_POS = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH', 'P'];
     const FIELD_8_POS = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
+
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let isCloudConnected = false;
 
     let state = {
       players: [],
@@ -604,64 +648,224 @@
       setTimeout(() => el.remove(), 2800);
     }
 
-    // 強制清理任何「同一人分身守兩個位置」或「打序重複人/重複守位」的防呆函式
+    // ==================== Firebase 初始化與即時同步 ====================
+    function getEffectiveFirebaseConfig() {
+      if (DEFAULT_FIREBASE_CONFIG && DEFAULT_FIREBASE_CONFIG.apiKey && DEFAULT_FIREBASE_CONFIG.projectId) {
+        return DEFAULT_FIREBASE_CONFIG;
+      }
+      try {
+        const saved = localStorage.getItem(FB_CONFIG_STORAGE_KEY);
+        if (saved) return JSON.parse(saved);
+      } catch (e) {}
+      return null;
+    }
+
+    function initFirebaseCloud() {
+      const cfg = getEffectiveFirebaseConfig();
+      const badge = document.getElementById('cloudStatusBadge');
+      if (!cfg || !cfg.apiKey || !cfg.projectId) {
+        badge.textContent = '本機模式 (未綁定雲端)';
+        badge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400';
+        return;
+      }
+
+      try {
+        if (!firebase.apps.length) {
+          firebase.initializeApp(cfg);
+        }
+        auth = firebase.auth();
+        db = firebase.firestore();
+
+        auth.onAuthStateChanged(user => {
+          currentUser = user;
+          updateAuthButtons();
+        });
+
+        // 即時監聽雲端資料庫變更：只要球經或管理員一改資料，所有人的畫面立刻自動更新！
+        db.collection('yuntech_baseball').doc('team_state_2026').onSnapshot(doc => {
+          isCloudConnected = true;
+          badge.textContent = '🟢 雲端即時同步中';
+          badge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-700';
+          if (doc.exists) {
+            const data = doc.data();
+            state.players = Array.isArray(data.players) ? data.players : [];
+            if (data.fieldAssignments) state.fieldAssignments = data.fieldAssignments;
+            if (Array.isArray(data.battingOrder) && data.battingOrder.length === 9) state.battingOrder = data.battingOrder;
+            if (Array.isArray(data.games)) state.games = data.games;
+            state.activeGameId = data.activeGameId || (state.games[0]?.id ?? null);
+            enforceNoDuplicatePlayers();
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            renderAll();
+          }
+        }, err => {
+          console.error(err);
+          badge.textContent = '🔴 雲端連線異常';
+          badge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-400';
+        });
+      } catch (err) {
+        console.error('Firebase init error:', err);
+      }
+    }
+
+    function updateAuthButtons() {
+      const btn = document.getElementById('authBtn');
+      const hint = document.getElementById('roleHintText');
+      if (currentUser) {
+        btn.innerHTML = `<i class="fa-solid fa-right-from-bracket mr-1"></i>登出 (${currentUser.email.split('@')[0]})`;
+        btn.className = 'px-3.5 py-2 rounded-lg text-sm font-bold bg-emerald-800 hover:bg-rose-700 text-white shadow';
+        btn.onclick = () => { auth.signOut(); showToast('已登出管理員帳號'); };
+        hint.textContent = `管理員已登入：可編輯雲端資料`;
+        hint.className = 'text-xs text-emerald-400 font-bold mt-1';
+      } else {
+        btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up mr-1"></i>管理員登入 / 雲端設定`;
+        btn.className = 'px-3.5 py-2 rounded-lg text-sm font-bold bg-sky-600 hover:bg-sky-500 text-white shadow';
+        btn.onclick = openCloudAuthModal;
+        hint.textContent = isCloudConnected ? '雲端唯讀模式 (登入後可修改)' : '本機儲存模式';
+        hint.className = 'text-xs text-amber-400 mt-1';
+      }
+    }
+
+    function canModifyData() {
+      // 如果已經連上 Firebase 雲端，必須登入管理員才允許修改，防止隊友或路人誤刪資料！
+      if (isCloudConnected && !currentUser) {
+        showToast('目前已開啟雲端同步，請先點擊右上角「管理員登入」才能修改資料！', 'error');
+        openCloudAuthModal();
+        return false;
+      }
+      return true;
+    }
+
+    window.openCloudAuthModal = function() {
+      const cfg = getEffectiveFirebaseConfig();
+      if (cfg) {
+        document.getElementById('fb-config-input').value = JSON.stringify(cfg, null, 2);
+      }
+      document.getElementById('cloudAuthModal').classList.remove('hidden');
+    };
+
+    window.closeCloudAuthModal = function() {
+      document.getElementById('cloudAuthModal').classList.add('hidden');
+    };
+
+    window.saveFirebaseConfigFromUI = function() {
+      let raw = document.getElementById('fb-config-input').value.trim();
+      // 支援直接貼上 const firebaseConfig = { ... };
+      raw = raw.replace(/^[^{]*({[\s\S]*})[^}]*$/, '$1');
+      // 將未加雙引號的 key 轉為合法 JSON
+      raw = raw.replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
+      try {
+        const parsed = JSON.parse(raw);
+        if (!parsed.apiKey || !parsed.projectId) throw new Error('缺少 apiKey 或 projectId');
+        localStorage.setItem(FB_CONFIG_STORAGE_KEY, JSON.stringify(parsed));
+        showToast('成功儲存 Firebase 設定！正在連線雲端...');
+        initFirebaseCloud();
+      } catch (e) {
+        showToast('格式錯誤：請貼上包含 apiKey 與 projectId 的設定物件', 'error');
+      }
+    };
+
+    window.handleFirebaseLogin = async function() {
+      if (!auth) {
+        showToast('請先在上方貼上並儲存 Firebase 設定！', 'error');
+        return;
+      }
+      const email = document.getElementById('login-email').value.trim();
+      const pwd = document.getElementById('login-password').value;
+      try {
+        await auth.signInWithEmailAndPassword(email, pwd);
+        closeCloudAuthModal();
+        showToast('管理員登入成功！現在修改會即時同步給全隊');
+      } catch (err) {
+        showToast('登入失敗：請檢查帳號密碼是否已在 Firebase Authentication 建立', 'error');
+      }
+    };
+
+    window.pushLocalToCloudNow = async function() {
+      if (!db || !currentUser) {
+        showToast('請先連線並登入管理員帳號！', 'error');
+        return;
+      }
+      await saveState();
+      showToast('已將目前畫面上的球員與比賽紀錄同步至雲端！');
+      closeCloudAuthModal();
+    };
+
+    // ==================== 防分身與狀態儲存 ====================
     function enforceNoDuplicatePlayers() {
       const validIds = new Set(state.players.map(p => p.id));
       const seenBatterIds = new Set();
       const seenPosGroups = new Set();
 
-      // 1. 確保 1~9 棒不會有重複球員或重複守位
       state.battingOrder.forEach(slot => {
         if (!slot.playerId || !validIds.has(slot.playerId) || !slot.pos) {
-          slot.playerId = null;
-          slot.pos = null;
-          return;
+          slot.playerId = null; slot.pos = null; return;
         }
         const grp = (slot.pos === 'DH' || slot.pos === 'P') ? 'DH_OR_P' : slot.pos;
         if (seenBatterIds.has(slot.playerId) || seenPosGroups.has(grp)) {
-          slot.playerId = null;
-          slot.pos = null;
+          slot.playerId = null; slot.pos = null;
         } else {
           seenBatterIds.add(slot.playerId);
           seenPosGroups.add(grp);
         }
       });
 
-      // 2. 檢查先發投手 P 是否合法：
-      // 如果原本的投手 P 已經在打序中去守 C/1B/2B/3B/SS/LF/CF/RF 等野手位置，則他絕對不能同時分身當投手 P！
       let currentPitcher = state.fieldAssignments.P;
-      if (currentPitcher && !validIds.has(currentPitcher)) {
-        currentPitcher = null;
-      }
+      if (currentPitcher && !validIds.has(currentPitcher)) currentPitcher = null;
       if (currentPitcher) {
-        const occupiedAsFielder = state.battingOrder.find(
-          s => s.playerId === currentPitcher && FIELD_8_POS.includes(s.pos)
-        );
-        if (occupiedAsFielder) {
-          // 該球員已去守野手（例如 1B），自動將他從投手丘 P 移除！
-          currentPitcher = null;
-        }
+        const occupiedAsFielder = state.battingOrder.find(s => s.playerId === currentPitcher && FIELD_8_POS.includes(s.pos));
+        if (occupiedAsFielder) currentPitcher = null;
       }
 
-      // 3. 若打序中有人以 P 身分打擊，他就是場上的投手 P
       const batterPitcher = state.battingOrder.find(s => s.playerId && s.pos === 'P');
-      if (batterPitcher) {
-        currentPitcher = batterPitcher.playerId;
-      }
+      if (batterPitcher) currentPitcher = batterPitcher.playerId;
 
-      // 4. 重建球場守位節點，保證球場 9 個位置不會出現重複球員
       state.fieldAssignments = {
-        P: currentPitcher,
-        C: null, '1B': null, '2B': null, '3B': null, SS: null, LF: null, CF: null, RF: null, DH: null
+        P: currentPitcher, C: null, '1B': null, '2B': null, '3B': null, SS: null, LF: null, CF: null, RF: null, DH: null
       };
       state.battingOrder.forEach(slot => {
-        if (slot.playerId && slot.pos) {
-          state.fieldAssignments[slot.pos] = slot.playerId;
-        }
+        if (slot.playerId && slot.pos) state.fieldAssignments[slot.pos] = slot.playerId;
       });
     }
 
-    // 計算球員「基礎數據 + 所有單場比賽數據」即時總和
+    async function saveState() {
+      enforceNoDuplicatePlayers();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      renderAll();
+
+      if (db && currentUser) {
+        try {
+          await db.collection('yuntech_baseball').doc('team_state_2026').set({
+            players: state.players,
+            fieldAssignments: state.fieldAssignments,
+            battingOrder: state.battingOrder,
+            games: state.games,
+            activeGameId: state.activeGameId,
+            updatedAt: new Date().toISOString(),
+            updatedBy: currentUser.email
+          });
+        } catch (err) {
+          console.error(err);
+          showToast('雲端寫入失敗，請確認 Firestore Rules 權限', 'error');
+        }
+      }
+    }
+
+    function loadLocalFallback() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          state.players = Array.isArray(parsed.players) ? parsed.players : [];
+          if (parsed.fieldAssignments) state.fieldAssignments = parsed.fieldAssignments;
+          if (Array.isArray(parsed.battingOrder) && parsed.battingOrder.length === 9) state.battingOrder = parsed.battingOrder;
+          if (Array.isArray(parsed.games)) state.games = parsed.games;
+          state.activeGameId = parsed.activeGameId || (state.games[0]?.id ?? null);
+        }
+        enforceNoDuplicatePlayers();
+      } catch (e) { console.error(e); }
+    }
+
+    // ==================== 計算球員「基礎數據 + 單場比賽數據」即時總和 ====================
     function getPlayerCombinedStats(player) {
       const b = player.baseStats || {};
       const t = {
@@ -705,27 +909,6 @@
       t.era = realIp > 0 ? (t.er * 9) / realIp : 0;
       t.whip = realIp > 0 ? (t.h_p + t.bb_p) / realIp : 0;
       return t;
-    }
-
-    function saveState() {
-      enforceNoDuplicatePlayers();
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      renderAll();
-    }
-
-    function loadState() {
-      try {
-        const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          state.players = Array.isArray(parsed.players) ? parsed.players : [];
-          if (parsed.fieldAssignments) state.fieldAssignments = parsed.fieldAssignments;
-          if (Array.isArray(parsed.battingOrder) && parsed.battingOrder.length === 9) state.battingOrder = parsed.battingOrder;
-          if (Array.isArray(parsed.games)) state.games = parsed.games;
-          state.activeGameId = parsed.activeGameId || (state.games[0]?.id ?? null);
-        }
-        enforceNoDuplicatePlayers();
-      } catch (e) { console.error(e); }
     }
 
     function switchTab(tab) {
@@ -879,22 +1062,12 @@
               <td class="p-3 sticky left-0 bg-slate-900 font-bold text-white">#${p.number} ${p.name}</td>
               <td class="p-3"><span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-700/50 font-bold">${posStr}</span></td>
               <td class="p-3 text-slate-400">${p.throws}/${p.bats}</td>
-              <td class="p-2.5 text-center">${s.g}</td>
-              <td class="p-2.5 text-center">${s.pa}</td>
-              <td class="p-2.5 text-center">${s.ab}</td>
-              <td class="p-2.5 text-center">${s.r}</td>
-              <td class="p-2.5 text-center font-bold text-emerald-400">${s.h}</td>
-              <td class="p-2.5 text-center">${s.d2b}</td>
-              <td class="p-2.5 text-center">${s.t3b}</td>
-              <td class="p-2.5 text-center font-bold text-amber-400">${s.hr}</td>
-              <td class="p-2.5 text-center font-bold text-amber-300">${s.rbi}</td>
-              <td class="p-2.5 text-center">${s.bb}</td>
-              <td class="p-2.5 text-center">${s.hbp}</td>
-              <td class="p-2.5 text-center">${s.so}</td>
-              <td class="p-2.5 text-center">${s.sh}</td>
-              <td class="p-2.5 text-center">${s.sf}</td>
-              <td class="p-2.5 text-center">${s.gidp}</td>
-              <td class="p-2.5 text-center">${s.sb}</td>
+              <td class="p-2.5 text-center">${s.g}</td><td class="p-2.5 text-center">${s.pa}</td><td class="p-2.5 text-center">${s.ab}</td>
+              <td class="p-2.5 text-center">${s.r}</td><td class="p-2.5 text-center font-bold text-emerald-400">${s.h}</td>
+              <td class="p-2.5 text-center">${s.d2b}</td><td class="p-2.5 text-center">${s.t3b}</td>
+              <td class="p-2.5 text-center font-bold text-amber-400">${s.hr}</td><td class="p-2.5 text-center font-bold text-amber-300">${s.rbi}</td>
+              <td class="p-2.5 text-center">${s.bb}</td><td class="p-2.5 text-center">${s.hbp}</td><td class="p-2.5 text-center">${s.so}</td>
+              <td class="p-2.5 text-center">${s.sh}</td><td class="p-2.5 text-center">${s.sf}</td><td class="p-2.5 text-center">${s.gidp}</td><td class="p-2.5 text-center">${s.sb}</td>
               <td class="p-2.5 text-center bg-slate-900/60 font-bold text-amber-400">${fmtAvg(s.avg)}</td>
               <td class="p-2.5 text-center bg-slate-900/60 font-bold text-sky-300">${fmtAvg(s.obp)}</td>
               <td class="p-2.5 text-center bg-slate-900/60 font-bold text-purple-300">${fmtAvg(s.slg)}</td>
@@ -914,7 +1087,7 @@
       }
     }
 
-    // ==================== 新增 / 編輯球員表單 Modal ====================
+    // ==================== 新增 / 編輯球員表單 ====================
     function renderPosMultiPicker() {
       const box = document.getElementById('posMultiPicker');
       box.innerHTML = ALL_POSITIONS.map(pos => {
@@ -923,18 +1096,14 @@
         return `
           <button type="button" onclick="toggleFormPos('${pos}')"
             class="px-3 py-1.5 rounded-lg text-xs font-bold border transition ${
-              active
-                ? idx === 0
-                  ? 'bg-emerald-600 border-emerald-400 text-white shadow'
-                  : 'bg-sky-700 border-sky-400 text-white'
-                : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white'
+              active ? (idx === 0 ? 'bg-emerald-600 border-emerald-400 text-white shadow' : 'bg-sky-700 border-sky-400 text-white')
+                     : 'bg-slate-900 border-slate-700 text-slate-400 hover:text-white'
             }">
             ${pos} ${active ? (idx === 0 ? '(主)' : `(副${idx})`) : ''}
           </button>
         `;
       }).join('');
-      document.getElementById('selectedPosPreview').textContent =
-        state.formSelectedPos.length > 0 ? `已選：${state.formSelectedPos.join(' → ')}` : '請至少選擇 1 個守位';
+      document.getElementById('selectedPosPreview').textContent = `已選：${state.formSelectedPos.join(' → ')}`;
     }
 
     function toggleFormPos(pos) {
@@ -980,6 +1149,7 @@
     }
 
     window.openPlayerFormModal = function(mode, playerId = null) {
+      if (!canModifyData()) return;
       const modal = document.getElementById('playerFormModal');
       document.getElementById('editPlayerId').value = playerId || '';
       if (mode === 'edit' && playerId) {
@@ -1015,48 +1185,33 @@
       modal.classList.remove('hidden');
     };
 
-    window.closePlayerFormModal = function() {
-      document.getElementById('playerFormModal').classList.add('hidden');
-    };
+    window.closePlayerFormModal = () => document.getElementById('playerFormModal').classList.add('hidden');
 
     window.savePlayerForm = function() {
+      if (!canModifyData()) return;
       const name = document.getElementById('pf-name').value.trim();
       const number = document.getElementById('pf-number').value.trim();
-      if (!name || number === '') {
-        showToast('請填寫球員姓名與背號！', 'error');
-        return;
-      }
+      if (!name || number === '') { showToast('請填寫球員姓名與背號！', 'error'); return; }
+
       const baseStats = {
-        g: num(document.getElementById('pf-g').value),
-        pa: num(document.getElementById('pf-pa').value),
-        ab: num(document.getElementById('pf-ab').value),
-        r: num(document.getElementById('pf-r').value),
-        h: num(document.getElementById('pf-h').value),
-        d2b: num(document.getElementById('pf-2b').value),
-        t3b: num(document.getElementById('pf-3b').value),
-        hr: num(document.getElementById('pf-hr').value),
-        rbi: num(document.getElementById('pf-rbi').value),
-        bb: num(document.getElementById('pf-bb').value),
-        hbp: num(document.getElementById('pf-hbp').value),
-        so: num(document.getElementById('pf-so').value),
-        sh: num(document.getElementById('pf-sh').value),
-        sf: num(document.getElementById('pf-sf').value),
-        gidp: num(document.getElementById('pf-gidp').value),
-        sb: num(document.getElementById('pf-sb').value),
-        ip: num(document.getElementById('pf-ip').value),
-        h_p: num(document.getElementById('pf-h_p').value),
-        er: num(document.getElementById('pf-er').value),
-        bb_p: num(document.getElementById('pf-bb_p').value),
-        so_p: num(document.getElementById('pf-so_p').value),
-        w: num(document.getElementById('pf-w').value)
+        g: num(document.getElementById('pf-g').value), pa: num(document.getElementById('pf-pa').value),
+        ab: num(document.getElementById('pf-ab').value), r: num(document.getElementById('pf-r').value),
+        h: num(document.getElementById('pf-h').value), d2b: num(document.getElementById('pf-2b').value),
+        t3b: num(document.getElementById('pf-3b').value), hr: num(document.getElementById('pf-hr').value),
+        rbi: num(document.getElementById('pf-rbi').value), bb: num(document.getElementById('pf-bb').value),
+        hbp: num(document.getElementById('pf-hbp').value), so: num(document.getElementById('pf-so').value),
+        sh: num(document.getElementById('pf-sh').value), sf: num(document.getElementById('pf-sf').value),
+        gidp: num(document.getElementById('pf-gidp').value), sb: num(document.getElementById('pf-sb').value),
+        ip: num(document.getElementById('pf-ip').value), h_p: num(document.getElementById('pf-h_p').value),
+        er: num(document.getElementById('pf-er').value), bb_p: num(document.getElementById('pf-bb_p').value),
+        so_p: num(document.getElementById('pf-so_p').value), w: num(document.getElementById('pf-w').value)
       };
 
       const editId = document.getElementById('editPlayerId').value;
       if (editId) {
         const p = state.players.find(x => x.id === editId);
         if (p) {
-          p.name = name;
-          p.number = num(number);
+          p.name = name; p.number = num(number);
           p.throws = document.getElementById('pf-throws').value;
           p.bats = document.getElementById('pf-bats').value;
           p.positions = [...state.formSelectedPos];
@@ -1065,14 +1220,10 @@
         showToast(`已更新 #${number} ${name}`);
       } else {
         state.players.push({
-          id: 'p_' + Date.now(),
-          name,
-          number: num(number),
-          team: '雲科棒球隊',
+          id: 'p_' + Date.now(), name, number: num(number), team: '雲科棒球隊',
           throws: document.getElementById('pf-throws').value,
           bats: document.getElementById('pf-bats').value,
-          positions: [...state.formSelectedPos],
-          baseStats
+          positions: [...state.formSelectedPos], baseStats
         });
         showToast(`已新增雲科球員 #${number} ${name}`);
       }
@@ -1081,6 +1232,7 @@
     };
 
     window.deletePlayer = function(id) {
+      if (!canModifyData()) return;
       const p = state.players.find(x => x.id === id);
       if (!p || !confirm(`確定要刪除 #${p.number} ${p.name} 嗎？`)) return;
       state.players = state.players.filter(x => x.id !== id);
@@ -1088,15 +1240,11 @@
       showToast('已刪除球員');
     };
 
-    // ==================== 戰術盤與 1~9 棒打序 (嚴格禁止同人分身與重複守位) ====================
-    function normalizePosGroup(pos) {
-      return (pos === 'DH' || pos === 'P') ? 'DH_OR_P' : pos;
-    }
+    // ==================== 戰術盤與 1~9 棒打序 ====================
+    function normalizePosGroup(pos) { return (pos === 'DH' || pos === 'P') ? 'DH_OR_P' : pos; }
 
     function renderTactics() {
       enforceNoDuplicatePlayers();
-
-      // 1. 渲染球場節點
       const nodesBox = document.getElementById('fieldNodesBox');
       const fieldPosList = ['LF', 'CF', 'RF', 'SS', '2B', '3B', '1B', 'P', 'C', 'DH'];
       nodesBox.innerHTML = fieldPosList.map(pos => {
@@ -1114,24 +1262,13 @@
         `;
       }).join('');
 
-      // 2. 渲染守位唯一檢核列
       const checkBar = document.getElementById('lineupPosCheckBar');
       const checkSlots = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH/P'];
       checkBar.innerHTML = checkSlots.map(label => {
-        const idx = state.battingOrder.findIndex(s =>
-          label === 'DH/P' ? (s.pos === 'DH' || s.pos === 'P') : s.pos === label
-        );
-        const filled = idx !== -1;
-        return `
-          <span class="px-2.5 py-1 rounded-lg text-xs font-bold border ${
-            filled ? 'bg-emerald-950/90 border-emerald-500 text-emerald-300' : 'bg-slate-900 border-slate-700 text-slate-500'
-          }">
-            ${label} ${filled ? `✓(${idx + 1}棒)` : '未排'}
-          </span>
-        `;
+        const idx = state.battingOrder.findIndex(s => label === 'DH/P' ? (s.pos === 'DH' || s.pos === 'P') : s.pos === label);
+        return `<span class="px-2.5 py-1 rounded-lg text-xs font-bold border ${idx !== -1 ? 'bg-emerald-950/90 border-emerald-500 text-emerald-300' : 'bg-slate-900 border-slate-700 text-slate-500'}">${label} ${idx !== -1 ? `✓(${idx + 1}棒)` : '未排'}</span>`;
       }).join('');
 
-      // 3. 渲染 1~9 棒列表
       const orderBox = document.getElementById('battingOrderList');
       orderBox.innerHTML = state.battingOrder.map((slot, i) => {
         const p = state.players.find(x => x.id === slot.playerId);
@@ -1141,17 +1278,11 @@
           <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900/85 border border-slate-800">
             <div class="flex items-center gap-3">
               <span class="w-7 h-7 rounded-lg bg-amber-500 text-slate-950 font-black text-xs flex items-center justify-center">${i + 1}</span>
-              ${p ? `
-                <span class="px-2 py-0.5 rounded bg-emerald-600 text-white text-xs font-black">${slot.pos}</span>
-                <span class="font-bold text-sm text-white">#${p.number} ${p.name}</span>
-                <span class="text-xs text-amber-400 font-bold">AVG ${fmtAvg(s.avg)} / OPS ${fmtAvg(s.ops)}</span>
-              ` : `<span class="text-xs text-slate-500">點擊右側指派第 ${i + 1} 棒打者與守位</span>`}
+              ${p ? `<span class="px-2 py-0.5 rounded bg-emerald-600 text-white text-xs font-black">${slot.pos}</span><span class="font-bold text-sm text-white">#${p.number} ${p.name}</span><span class="text-xs text-amber-400 font-bold">AVG ${fmtAvg(s.avg)} / OPS ${fmtAvg(s.ops)}</span>`
+                  : `<span class="text-xs text-slate-500">點擊右側指派第 ${i + 1} 棒打者與守位</span>`}
             </div>
             <div class="flex items-center gap-1.5">
-              ${p && posList.length > 1 ? posList.map(candPos => {
-                if (candPos === slot.pos) return '';
-                return `<button onclick="switchBatterPosInLineup(${i}, '${candPos}')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-sky-700 text-[11px] text-sky-300 font-bold" title="切換或與隊友互換守位">換${candPos}</button>`;
-              }).join('') : ''}
+              ${p && posList.length > 1 ? posList.map(candPos => candPos === slot.pos ? '' : `<button onclick="switchBatterPosInLineup(${i}, '${candPos}')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-sky-700 text-[11px] text-sky-300 font-bold">換${candPos}</button>`).join('') : ''}
               <button onclick="moveBattingSlot(${i}, -1)" class="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-300"><i class="fa-solid fa-arrow-up"></i></button>
               <button onclick="moveBattingSlot(${i}, 1)" class="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-xs text-slate-300"><i class="fa-solid fa-arrow-down"></i></button>
               <button onclick="openLineupSlotPicker(${i})" class="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold">選派</button>
@@ -1161,19 +1292,17 @@
       }).join('');
     }
 
-    // 多守位球員在打序上直接切換或與隊友互換守位
     window.switchBatterPosInLineup = function(slotIdx, targetPos) {
+      if (!canModifyData()) return;
       const curSlot = state.battingOrder[slotIdx];
       if (!curSlot || !curSlot.playerId) return;
       const targetGroup = normalizePosGroup(targetPos);
       const conflictIdx = state.battingOrder.findIndex((s, idx) => idx !== slotIdx && s.pos && normalizePosGroup(s.pos) === targetGroup);
 
       if (conflictIdx === -1) {
-        // 如果這位球員原本是投手 P，現在切換去守野手 (如 1B)，enforceNoDuplicatePlayers 會自動卸除他的 P
         curSlot.pos = targetPos;
         if (targetPos === 'P') state.fieldAssignments.P = curSlot.playerId;
         saveState();
-        showToast(`第 ${slotIdx + 1} 棒已切換守位為 ${targetPos}`);
       } else {
         const otherSlot = state.battingOrder[conflictIdx];
         const otherPlayer = state.players.find(x => x.id === otherSlot.playerId);
@@ -1182,14 +1311,15 @@
           curSlot.pos = targetPos;
           otherSlot.pos = oldPos;
           saveState();
-          showToast(`第 ${slotIdx + 1} 棒與第 ${conflictIdx + 1} 棒已完成守位互換 (${oldPos} ⇄ ${targetPos})`);
+          showToast(`已完成守位互換 (${oldPos} ⇄ ${targetPos})`);
         } else {
-          showToast(`守位 ${targetPos} 已被第 ${conflictIdx + 1} 棒佔用，且該隊友無法兼守 ${oldPos}`, 'error');
+          showToast(`守位 ${targetPos} 已被佔用且隊友無法兼守 ${oldPos}`, 'error');
         }
       }
     };
 
     window.moveBattingSlot = function(idx, dir) {
+      if (!canModifyData()) return;
       const target = idx + dir;
       if (target < 0 || target >= 9) return;
       const tmp = state.battingOrder[idx];
@@ -1199,80 +1329,52 @@
     };
 
     window.openLineupSlotPicker = function(slotIdx) {
+      if (!canModifyData()) return;
       const modal = document.getElementById('slotPickerModal');
       document.getElementById('slotPickerTitle').textContent = `指派第 ${slotIdx + 1} 棒打者（人員與守位皆不可重複）`;
       const box = document.getElementById('slotPickerOptions');
 
-      // 其他棒次已使用的球員 ID
       const usedPlayerIds = new Set(state.battingOrder.map((s, i) => i !== slotIdx ? s.playerId : null).filter(Boolean));
-      // 其他棒次已使用的守位群組
       const usedGroups = new Map();
-      state.battingOrder.forEach((s, i) => {
-        if (i !== slotIdx && s.pos) usedGroups.set(normalizePosGroup(s.pos), i + 1);
-      });
-
+      state.battingOrder.forEach((s, i) => { if (i !== slotIdx && s.pos) usedGroups.set(normalizePosGroup(s.pos), i + 1); });
       const currentPitcherId = state.fieldAssignments.P;
 
       let html = `<button onclick="assignLineupSlot(${slotIdx}, null, null)" class="w-full text-left p-2.5 rounded-xl bg-rose-950/50 hover:bg-rose-900 text-rose-300 text-xs font-bold">清除此棒次</button>`;
-
       state.players.forEach(p => {
-        if (usedPlayerIds.has(p.id)) return; // 已在其他棒次的球員直接隱藏，絕不重複上場打擊
+        if (usedPlayerIds.has(p.id)) return;
         const s = getPlayerCombinedStats(p);
         const rawPos = p.positions || ['C'];
-        const candidatePos = rawPos.includes('TWP')
-          ? Array.from(new Set([...rawPos.filter(x => x !== 'TWP'), 'P', 'DH']))
-          : rawPos;
-
+        const candidatePos = rawPos.includes('TWP') ? Array.from(new Set([...rawPos.filter(x => x !== 'TWP'), 'P', 'DH'])) : rawPos;
         const isCurrentPitcher = (currentPitcherId === p.id);
 
         const posButtons = candidatePos.map(pos => {
           const occupiedBy = usedGroups.get(normalizePosGroup(pos));
-          if (occupiedBy) {
-            return `<span class="px-2 py-1 rounded bg-slate-800 text-slate-500 text-[11px]">🔒 ${pos} (${occupiedBy}棒已守)</span>`;
-          }
-          // 若該球員目前在投手丘 P，卻想排他去守 1B/SS 等野手位置，提示會自動將他從投手丘移防
+          if (occupiedBy) return `<span class="px-2 py-1 rounded bg-slate-800 text-slate-500 text-[11px]">🔒 ${pos} (${occupiedBy}棒)</span>`;
           if (isCurrentPitcher && FIELD_8_POS.includes(pos)) {
-            return `<button onclick="assignLineupSlot(${slotIdx}, '${p.id}', '${pos}')" class="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-500 text-slate-950 text-xs font-bold" title="會自動將他從投手丘 P 移防至 ${pos}">從 P 移防 ${pos}</button>`;
+            return `<button onclick="assignLineupSlot(${slotIdx}, '${p.id}', '${pos}')" class="px-2.5 py-1 rounded bg-amber-600 text-slate-950 text-xs font-bold">從 P 移防 ${pos}</button>`;
           }
-          return `<button onclick="assignLineupSlot(${slotIdx}, '${p.id}', '${pos}')" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">以 ${pos} 排入</button>`;
+          return `<button onclick="assignLineupSlot(${slotIdx}, '${p.id}', '${pos}')" class="px-2.5 py-1 rounded bg-emerald-600 text-white text-xs font-bold">以 ${pos} 排入</button>`;
         }).join(' ');
 
         html += `
           <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <div class="font-bold text-sm text-white">
-                #${p.number} ${p.name}
-                ${isCurrentPitcher ? '<span class="ml-1 px-1.5 py-0.5 rounded bg-rose-600 text-white text-[10px]">目前在場上守 P</span>' : ''}
-                <span class="text-xs text-amber-400 ml-1">AVG ${fmtAvg(s.avg)}</span>
-              </div>
-              <div class="text-[11px] text-slate-400">可守位置：${(p.positions || []).join(', ')}</div>
+              <div class="font-bold text-sm text-white">#${p.number} ${p.name} <span class="text-xs text-amber-400 ml-1">AVG ${fmtAvg(s.avg)}</span></div>
+              <div class="text-[11px] text-slate-400">可守：${(p.positions || []).join(', ')}</div>
             </div>
             <div class="flex flex-wrap gap-1.5">${posButtons}</div>
           </div>
         `;
       });
-
       box.innerHTML = html;
       modal.classList.remove('hidden');
     };
 
     window.assignLineupSlot = function(slotIdx, playerId, pos) {
       if (playerId) {
-        // 先把該球員從其他棒次清除（防止同一人在打序出現兩次）
-        state.battingOrder.forEach((s, i) => {
-          if (i !== slotIdx && s.playerId === playerId) {
-            s.playerId = null;
-            s.pos = null;
-          }
-        });
-        // 若該球員原本在投手丘 P，現在被指派去守 1B/C/SS 等野手位置，立即將他從 P 移除！
-        if (FIELD_8_POS.includes(pos) && state.fieldAssignments.P === playerId) {
-          state.fieldAssignments.P = null;
-          showToast(`已將球員從投手 P 移防至 ${pos}（避免同人重複守備）`);
-        }
-        if (pos === 'P') {
-          state.fieldAssignments.P = playerId;
-        }
+        state.battingOrder.forEach((s, i) => { if (i !== slotIdx && s.playerId === playerId) { s.playerId = null; s.pos = null; } });
+        if (FIELD_8_POS.includes(pos) && state.fieldAssignments.P === playerId) state.fieldAssignments.P = null;
+        if (pos === 'P') state.fieldAssignments.P = playerId;
       }
       state.battingOrder[slotIdx] = { playerId, pos };
       closeSlotPickerModal();
@@ -1280,170 +1382,107 @@
     };
 
     window.openFieldSlotPicker = function(pos) {
+      if (!canModifyData()) return;
       const modal = document.getElementById('slotPickerModal');
-      document.getElementById('slotPickerTitle').textContent = `指派球場守位：${pos}（若球員已在其他位置將自動移防）`;
+      document.getElementById('slotPickerTitle').textContent = `指派球場守位：${pos}`;
       const box = document.getElementById('slotPickerOptions');
+      const eligible = state.players.filter(p => (p.positions || []).includes(pos) || ((pos === 'P' || pos === 'DH') && (p.positions || []).includes('TWP')));
 
-      const eligible = state.players.filter(p =>
-        (p.positions || []).includes(pos) || ((pos === 'P' || pos === 'DH') && (p.positions || []).includes('TWP'))
-      );
-
-      let html = `<button onclick="clearFieldPos('${pos}')" class="w-full text-left p-2.5 rounded-xl bg-rose-950/50 hover:bg-rose-900 text-rose-300 text-xs font-bold">清空 ${pos} 守位</button>`;
-
-      if (eligible.length === 0) {
-        html += `<div class="text-xs text-slate-400 p-4 text-center">目前沒有具備 ${pos} 守位的球員，請先新增或編輯球員守位。</div>`;
-      } else {
-        eligible.forEach(p => {
-          // 找出該球員目前在場上的哪個位置
-          const currentPosList = Object.entries(state.fieldAssignments)
-            .filter(([k, v]) => v === p.id)
-            .map(([k]) => k);
-          const curBadge = currentPosList.length > 0
-            ? `<span class="ml-2 px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px]">目前守 ${currentPosList.join('/')}</span>`
-            : '';
-
-          html += `
-            <button onclick="assignFieldPos('${pos}', '${p.id}')" class="w-full text-left p-3 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 flex items-center justify-between">
-              <div>
-                <span class="font-bold text-sm text-white">#${p.number} ${p.name}</span>
-                ${curBadge}
-              </div>
-              <span class="text-xs text-emerald-400 font-bold">指派鎮守 ${pos}</span>
-            </button>
-          `;
-        });
-      }
+      let html = `<button onclick="clearFieldPos('${pos}')" class="w-full text-left p-2.5 rounded-xl bg-rose-950/50 text-rose-300 text-xs font-bold">清空 ${pos} 守位</button>`;
+      eligible.forEach(p => {
+        html += `
+          <button onclick="assignFieldPos('${pos}', '${p.id}')" class="w-full text-left p-3 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 flex items-center justify-between">
+            <span class="font-bold text-sm text-white">#${p.number} ${p.name}</span>
+            <span class="text-xs text-emerald-400 font-bold">指派鎮守 ${pos}</span>
+          </button>
+        `;
+      });
       box.innerHTML = html;
       modal.classList.remove('hidden');
     };
 
     window.clearFieldPos = function(pos) {
-      if (pos === 'P') {
-        state.fieldAssignments.P = null;
-      }
-      state.battingOrder.forEach(s => {
-        if (s.pos === pos) { s.playerId = null; s.pos = null; }
-      });
+      if (pos === 'P') state.fieldAssignments.P = null;
+      state.battingOrder.forEach(s => { if (s.pos === pos) { s.playerId = null; s.pos = null; } });
       closeSlotPickerModal();
       saveState();
     };
 
     window.assignFieldPos = function(pos, playerId) {
       if (pos === 'P') {
-        // 如果把某球員指派去當投手 P，但他原本在打序中守 1B/C/SS 等野手位置：
-        // 必須將他原本的野手守位清掉（或若打序還沒人打 P/DH，轉為 P），絕不允許同人同時守 P 又守 1B！
         state.battingOrder.forEach(s => {
           if (s.playerId === playerId && FIELD_8_POS.includes(s.pos)) {
-            const hasDhOrP = state.battingOrder.some(other => other !== s && (other.pos === 'DH' || other.pos === 'P'));
-            if (!hasDhOrP) {
-              s.pos = 'P';
-              showToast(`已將球員由野手轉為投手打擊 (P)`);
-            } else {
-              s.playerId = null;
-              s.pos = null;
-              showToast(`已將球員移防至投手丘 P，並騰出原野手位置`);
-            }
+            s.playerId = null; s.pos = null;
           }
         });
         state.fieldAssignments.P = playerId;
       } else {
-        // 指派到 C, 1B, 2B, 3B, SS, LF, CF, RF, DH
-        // 若該球員原本在投手丘 P，而且現在指派的是 8 大野手位置，自動解除他的 P 職務
-        if (FIELD_8_POS.includes(pos) && state.fieldAssignments.P === playerId) {
-          state.fieldAssignments.P = null;
-        }
-        // 先找出目標守位在打序中的位置，或該球員原本所在的棒次
+        if (FIELD_8_POS.includes(pos) && state.fieldAssignments.P === playerId) state.fieldAssignments.P = null;
         const posGroup = normalizePosGroup(pos);
         const existingPosSlotIdx = state.battingOrder.findIndex(s => s.pos && normalizePosGroup(s.pos) === posGroup);
         const playerCurrentSlotIdx = state.battingOrder.findIndex(s => s.playerId === playerId);
         const emptySlotIdx = state.battingOrder.findIndex(s => !s.playerId);
-
-        // 先清除該球員在打序中的舊紀錄
-        if (playerCurrentSlotIdx !== -1) {
-          state.battingOrder[playerCurrentSlotIdx] = { playerId: null, pos: null };
-        }
-
-        const targetIdx = existingPosSlotIdx !== -1
-          ? existingPosSlotIdx
-          : (playerCurrentSlotIdx !== -1 ? playerCurrentSlotIdx : emptySlotIdx);
-
-        if (targetIdx !== -1) {
-          state.battingOrder[targetIdx] = { playerId, pos };
-        }
+        if (playerCurrentSlotIdx !== -1) state.battingOrder[playerCurrentSlotIdx] = { playerId: null, pos: null };
+        const targetIdx = existingPosSlotIdx !== -1 ? existingPosSlotIdx : (playerCurrentSlotIdx !== -1 ? playerCurrentSlotIdx : emptySlotIdx);
+        if (targetIdx !== -1) state.battingOrder[targetIdx] = { playerId, pos };
       }
       closeSlotPickerModal();
       saveState();
     };
 
-    window.closeSlotPickerModal = function() {
-      document.getElementById('slotPickerModal').classList.add('hidden');
-    };
+    window.closeSlotPickerModal = () => document.getElementById('slotPickerModal').classList.add('hidden');
 
     window.autoGenerateLineup = function() {
-      if (state.players.length === 0) {
-        showToast('請先新增雲科球員後再執行自動排陣！', 'error');
-        return;
-      }
+      if (!canModifyData()) return;
+      if (state.players.length === 0) { showToast('請先新增球員！', 'error'); return; }
       const requiredPos = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'];
       const usedIds = new Set();
       const assigned = [];
-
-      // 先挑出一位專職投手 P（或二刀流），避免他後面又被排去守 1B 造成分身
       const pitcher = state.players.find(p => (p.positions || []).includes('P') || (p.positions || []).includes('TWP'));
 
       requiredPos.forEach(pos => {
         const cand = state.players.find(p => {
           if (usedIds.has(p.id)) return false;
-          // 如果這個人已經是先發投手 P，他就不能去守 C~RF 這 8 個野手位置（但可以打 DH）
           if (pitcher && p.id === pitcher.id && FIELD_8_POS.includes(pos)) return false;
           const pPos = p.positions || [];
           return pPos.includes(pos) || (pos === 'DH' && pPos.includes('TWP'));
         });
-        if (cand) {
-          usedIds.add(cand.id);
-          assigned.push({ playerId: cand.id, pos });
-        }
+        if (cand) { usedIds.add(cand.id); assigned.push({ playerId: cand.id, pos }); }
       });
-
-      while (assigned.length < 9) {
-        assigned.push({ playerId: null, pos: null });
-      }
+      while (assigned.length < 9) assigned.push({ playerId: null, pos: null });
       state.battingOrder = assigned;
       state.fieldAssignments.P = pitcher ? pitcher.id : null;
       saveState();
-      showToast('已完成全場與 1~9 棒無重複自動排陣！');
+      showToast('已完成自動排陣！');
     };
 
     window.clearLineup = function() {
+      if (!canModifyData()) return;
       state.battingOrder = Array.from({ length: 9 }, () => ({ playerId: null, pos: null }));
       state.fieldAssignments = { P:null, C:null, '1B':null, '2B':null, '3B':null, SS:null, LF:null, CF:null, RF:null, DH:null };
       saveState();
-      showToast('已清空打序與守備配置');
     };
 
-    // ==================== 單場比賽紀錄與局數中替換守備 ====================
-    function getCurrentGame() {
-      return state.games.find(g => g.id === state.activeGameId) || null;
-    }
+    // ==================== 單場比賽紀錄 ====================
+    function getCurrentGame() { return state.games.find(g => g.id === state.activeGameId) || null; }
 
     window.openNewGameModal = function() {
+      if (!canModifyData()) return;
       document.getElementById('ng-date').value = new Date().toISOString().slice(0, 10);
       document.getElementById('ng-opponent').value = '';
       document.getElementById('newGameModal').classList.remove('hidden');
     };
-
-    window.closeNewGameModal = function() {
-      document.getElementById('newGameModal').classList.add('hidden');
-    };
+    window.closeNewGameModal = () => document.getElementById('newGameModal').classList.add('hidden');
 
     window.createNewGameConfirm = function() {
+      if (!canModifyData()) return;
       const opp = document.getElementById('ng-opponent').value.trim();
-      if (!opp) { showToast('請輸入對手學校或球隊名稱！', 'error'); return; }
+      if (!opp) { showToast('請輸入對手名稱！', 'error'); return; }
       const newGame = {
         id: 'gm_' + Date.now(),
-        date: document.getElementById('ng-date').value || '2026-10-30',
+        date: document.getElementById('ng-date').value || '2026-11-04',
         opponent: opp,
-        tournament: document.getElementById('ng-tournament').value.trim() || '大專棒球聯賽',
+        tournament: document.getElementById('ng-tournament').value.trim() || 'UBL 大專棒球聯賽',
         ourScores: [0,0,0,0,0,0,0,0,0],
         oppScores: [0,0,0,0,0,0,0,0,0],
         lineup: Array.from({ length: 9 }, () => ({ playerId: null, pos: null })),
@@ -1452,24 +1491,17 @@
         pitcherStats: {},
         subLogs: []
       };
-
-      if (document.getElementById('ng-copyLineup').checked) {
-        copyTacticsIntoGameObject(newGame);
-      }
+      if (document.getElementById('ng-copyLineup').checked) copyTacticsIntoGameObject(newGame);
       state.games.unshift(newGame);
       state.activeGameId = newGame.id;
       closeNewGameModal();
       saveState();
-      showToast(`已建立對戰「${opp}」比賽紀錄`);
     };
 
     function ensureBatterStatRow(gm, pid, initPos) {
       if (!pid) return;
       if (!gm.batterStats[pid]) {
-        gm.batterStats[pid] = {
-          posHistory: initPos ? [initPos] : [],
-          pa:0, ab:0, r:0, h:0, d2b:0, t3b:0, hr:0, rbi:0, bb:0, hbp:0, so:0, sh:0, sf:0, gidp:0, sb:0
-        };
+        gm.batterStats[pid] = { posHistory: initPos ? [initPos] : [], pa:0, ab:0, r:0, h:0, d2b:0, t3b:0, hr:0, rbi:0, bb:0, hbp:0, so:0, sh:0, sf:0, gidp:0, sb:0 };
       } else if (initPos && !gm.batterStats[pid].posHistory.includes(initPos)) {
         gm.batterStats[pid].posHistory.push(initPos);
       }
@@ -1477,9 +1509,7 @@
 
     function ensurePitcherStatRow(gm, pid) {
       if (!pid) return;
-      if (!gm.pitcherStats[pid]) {
-        gm.pitcherStats[pid] = { ip: 0, h_p: 0, er: 0, bb_p: 0, so_p: 0, w: 0 };
-      }
+      if (!gm.pitcherStats[pid]) gm.pitcherStats[pid] = { ip: 0, h_p: 0, er: 0, bb_p: 0, so_p: 0, w: 0 };
     }
 
     function copyTacticsIntoGameObject(gm) {
@@ -1493,25 +1523,23 @@
     }
 
     window.importTacticsToCurrentGame = function() {
+      if (!canModifyData()) return;
       const gm = getCurrentGame();
       if (!gm) return;
       copyTacticsIntoGameObject(gm);
       saveState();
-      showToast('已將戰術盤先發名單帶入本場比賽！');
+      showToast('已帶入戰術盤先發名單！');
     };
 
-    window.selectGame = function(gid) {
-      state.activeGameId = gid;
-      saveState();
-    };
+    window.selectGame = function(gid) { state.activeGameId = gid; renderGamesView(); };
 
     window.deleteCurrentGame = function() {
+      if (!canModifyData()) return;
       const gm = getCurrentGame();
       if (!gm || !confirm(`確定要刪除對戰「${gm.opponent}」的比賽紀錄嗎？`)) return;
       state.games = state.games.filter(g => g.id !== gm.id);
       state.activeGameId = state.games[0]?.id || null;
       saveState();
-      showToast('已刪除比賽場次');
     };
 
     window.updateSubModalUI = function() {
@@ -1523,43 +1551,28 @@
       const posBox = document.getElementById('subNewPosBox');
 
       const slotSel = document.getElementById('subTargetSlot');
-      if (!slotSel.innerHTML) {
-        slotSel.innerHTML = Array.from({ length: 9 }, (_, i) => `<option value="${i}">第 ${i + 1} 棒</option>`).join('');
-      }
+      if (!slotSel.innerHTML) slotSel.innerHTML = Array.from({ length: 9 }, (_, i) => `<option value="${i}">第 ${i + 1} 棒</option>`).join('');
       const targetSlotIdx = num(slotSel.value);
       const currentSlot = gm.lineup[targetSlotIdx] || { playerId: null, pos: null };
 
       if (type === 'PITCHER_CHANGE') {
-        slotBox.classList.add('hidden');
-        posBox.classList.add('hidden');
-        playerBox.classList.remove('hidden');
-        document.getElementById('subIncomingPlayer').innerHTML = state.players.map(p =>
-          `<option value="${p.id}">#${p.number} ${p.name} (${(p.positions||[]).join('/')})</option>`
-        ).join('');
+        slotBox.classList.add('hidden'); posBox.classList.add('hidden'); playerBox.classList.remove('hidden');
+        document.getElementById('subIncomingPlayer').innerHTML = state.players.map(p => `<option value="${p.id}">#${p.number} ${p.name}</option>`).join('');
       } else if (type === 'POS_CHANGE') {
-        slotBox.classList.remove('hidden');
-        playerBox.classList.add('hidden');
-        posBox.classList.remove('hidden');
+        slotBox.classList.remove('hidden'); playerBox.classList.add('hidden'); posBox.classList.remove('hidden');
         const p = state.players.find(x => x.id === currentSlot.playerId);
         const posChoices = p ? (p.positions || LINEUP_9_POS) : LINEUP_9_POS;
-        document.getElementById('subNewPosition').innerHTML = posChoices.map(pos =>
-          `<option value="${pos}">${pos}</option>`
-        ).join('');
+        document.getElementById('subNewPosition').innerHTML = posChoices.map(pos => `<option value="${pos}">${pos}</option>`).join('');
       } else {
-        slotBox.classList.remove('hidden');
-        playerBox.classList.remove('hidden');
-        posBox.classList.remove('hidden');
+        slotBox.classList.remove('hidden'); playerBox.classList.remove('hidden'); posBox.classList.remove('hidden');
         const activeIds = new Set(gm.lineup.map((s, idx) => idx !== targetSlotIdx ? s.playerId : null).filter(Boolean));
-        document.getElementById('subIncomingPlayer').innerHTML = state.players
-          .filter(p => !activeIds.has(p.id))
-          .map(p => `<option value="${p.id}">#${p.number} ${p.name} (${(p.positions||[]).join('/')})</option>`).join('');
-        document.getElementById('subNewPosition').innerHTML = LINEUP_9_POS.map(pos =>
-          `<option value="${pos}" ${pos === currentSlot.pos ? 'selected' : ''}>${pos}</option>`
-        ).join('');
+        document.getElementById('subIncomingPlayer').innerHTML = state.players.filter(p => !activeIds.has(p.id)).map(p => `<option value="${p.id}">#${p.number} ${p.name}</option>`).join('');
+        document.getElementById('subNewPosition').innerHTML = LINEUP_9_POS.map(pos => `<option value="${pos}" ${pos === currentSlot.pos ? 'selected' : ''}>${pos}</option>`).join('');
       }
     };
 
     window.executeInGameSubstitution = function() {
+      if (!canModifyData()) return;
       const gm = getCurrentGame();
       if (!gm) return;
       const inning = `${document.getElementById('inGameInning').value}局${document.getElementById('inGameHalf').value}`;
@@ -1570,42 +1583,39 @@
         const newPid = document.getElementById('subIncomingPlayer').value;
         const newP = state.players.find(x => x.id === newPid);
         if (!newP) return;
-        const oldP = state.players.find(x => x.id === gm.currentPitcherId);
         gm.currentPitcherId = newPid;
         ensurePitcherStatRow(gm, newPid);
-        gm.subLogs.unshift(`[${inning}] 換投：#${newP.number} ${newP.name} 接替 ${oldP ? `#${oldP.number} ${oldP.name}` : '先發投手'} 登板`);
+        gm.subLogs.unshift(`[${inning}] 換投：#${newP.number} ${newP.name} 登板`);
       } else if (type === 'POS_CHANGE') {
         const cur = gm.lineup[slotIdx];
         const p = state.players.find(x => x.id === cur?.playerId);
         const newPos = document.getElementById('subNewPosition').value;
-        if (!p) { showToast('該棒次尚無球員！', 'error'); return; }
+        if (!p) return;
         const oldPos = cur.pos;
         const conflictIdx = gm.lineup.findIndex((s, i) => i !== slotIdx && s.pos === newPos);
         cur.pos = newPos;
         ensureBatterStatRow(gm, p.id, newPos);
         if (conflictIdx !== -1) {
-          const otherP = state.players.find(x => x.id === gm.lineup[conflictIdx].playerId);
           gm.lineup[conflictIdx].pos = oldPos;
-          if (otherP) ensureBatterStatRow(gm, otherP.id, oldPos);
-          gm.subLogs.unshift(`[${inning}] 守位互換：第${slotIdx+1}棒 #${p.number} ${p.name}(→${newPos}) 與 第${conflictIdx+1}棒(${oldPos}) 互換守備`);
+          gm.subLogs.unshift(`[${inning}] 守位互換：第${slotIdx+1}棒(${newPos}) ⇄ 第${conflictIdx+1}棒(${oldPos})`);
         } else {
-          gm.subLogs.unshift(`[${inning}] 守備移防：第${slotIdx+1}棒 #${p.number} ${p.name} 由 ${oldPos || '原守位'} 移防至 ${newPos}`);
+          gm.subLogs.unshift(`[${inning}] 移防：#${p.number} ${p.name} 移防至 ${newPos}`);
         }
       } else {
         const newPid = document.getElementById('subIncomingPlayer').value;
         const newPos = document.getElementById('subNewPosition').value;
         const newP = state.players.find(x => x.id === newPid);
         if (!newP) return;
-        const oldP = state.players.find(x => x.id === gm.lineup[slotIdx]?.playerId);
         gm.lineup[slotIdx] = { playerId: newPid, pos: newPos };
         ensureBatterStatRow(gm, newPid, newPos);
-        gm.subLogs.unshift(`[${inning}] 代打/替換：第${slotIdx+1}棒由 #${newP.number} ${newP.name} (${newPos}) 接替 ${oldP ? `#${oldP.number} ${oldP.name}` : '原打者'}`);
+        gm.subLogs.unshift(`[${inning}] 代打/替換：第${slotIdx+1}棒由 #${newP.number} ${newP.name} (${newPos}) 接替`);
       }
       saveState();
-      showToast('已記錄局數守備調度並更新比賽名單！');
+      showToast('已更新比賽調度！');
     };
 
     window.updateGameScore = function(team, inningIdx, val) {
+      if (!canModifyData()) return;
       const gm = getCurrentGame();
       if (!gm) return;
       if (team === 'our') gm.ourScores[inningIdx] = Math.max(0, num(val));
@@ -1614,6 +1624,7 @@
     };
 
     window.updateGameBatterStat = function(pid, field, val) {
+      if (!canModifyData()) return;
       const gm = getCurrentGame();
       if (!gm || !gm.batterStats[pid]) return;
       gm.batterStats[pid][field] = Math.max(0, num(val));
@@ -1621,6 +1632,7 @@
     };
 
     window.updateGamePitcherStat = function(pid, field, val) {
+      if (!canModifyData()) return;
       const gm = getCurrentGame();
       if (!gm || !gm.pitcherStats[pid]) return;
       gm.pitcherStats[pid][field] = Math.max(0, num(val));
@@ -1628,6 +1640,7 @@
     };
 
     window.manualAddBatterToGame = function() {
+      if (!canModifyData()) return;
       const gm = getCurrentGame();
       const pid = document.getElementById('addBatterToGameSelect').value;
       const p = state.players.find(x => x.id === pid);
@@ -1637,6 +1650,7 @@
     };
 
     window.manualAddPitcherToGame = function() {
+      if (!canModifyData()) return;
       const gm = getCurrentGame();
       const pid = document.getElementById('addPitcherToGameSelect').value;
       if (!gm || !pid) return;
@@ -1651,24 +1665,14 @@
 
       if (state.games.length === 0) {
         sel.innerHTML = '<option value="">尚無比賽紀錄</option>';
-        noBox.classList.remove('hidden');
-        ws.classList.add('hidden');
-        return;
+        noBox.classList.remove('hidden'); ws.classList.add('hidden'); return;
       }
-
-      if (!state.activeGameId || !state.games.some(g => g.id === state.activeGameId)) {
-        state.activeGameId = state.games[0].id;
-      }
-
-      sel.innerHTML = state.games.map(g =>
-        `<option value="${g.id}" ${g.id === state.activeGameId ? 'selected' : ''}>${g.date}｜雲科 vs ${g.opponent} (${g.tournament})</option>`
-      ).join('');
-
-      noBox.classList.add('hidden');
-      ws.classList.remove('hidden');
+      if (!state.activeGameId || !state.games.some(g => g.id === state.activeGameId)) state.activeGameId = state.games[0].id;
+      sel.innerHTML = state.games.map(g => `<option value="${g.id}" ${g.id === state.activeGameId ? 'selected' : ''}>${g.date}｜雲科 vs ${g.opponent}</option>`).join('');
+      noBox.classList.add('hidden'); ws.classList.remove('hidden');
 
       const gm = getCurrentGame();
-      document.getElementById('gameMetaTitle').textContent = `${gm.date} · ${gm.tournament}（雲科棒球隊 vs ${gm.opponent}）`;
+      document.getElementById('gameMetaTitle').textContent = `${gm.date} · ${gm.tournament}（雲科 vs ${gm.opponent}）`;
 
       const ourR = gm.ourScores.reduce((a, b) => a + num(b), 0);
       const oppR = gm.oppScores.reduce((a, b) => a + num(b), 0);
@@ -1686,16 +1690,11 @@
       `;
 
       updateSubModalUI();
-
       const playerOpts = state.players.map(p => `<option value="${p.id}">#${p.number} ${p.name}</option>`).join('');
       document.getElementById('addBatterToGameSelect').innerHTML = playerOpts;
       document.getElementById('addPitcherToGameSelect').innerHTML = playerOpts;
 
-      const batterIds = new Set([
-        ...gm.lineup.map(s => s.playerId).filter(Boolean),
-        ...Object.keys(gm.batterStats || {})
-      ]);
-
+      const batterIds = new Set([...gm.lineup.map(s => s.playerId).filter(Boolean), ...Object.keys(gm.batterStats || {})]);
       const bFields = ['pa','ab','r','h','d2b','t3b','hr','rbi','bb','hbp','so','sh','sf','gidp','sb'];
       document.getElementById('gameBattingTableBody').innerHTML = Array.from(batterIds).map(pid => {
         const p = state.players.find(x => x.id === pid);
@@ -1703,19 +1702,13 @@
         ensureBatterStatRow(gm, pid, null);
         const st = gm.batterStats[pid];
         const slotIdx = gm.lineup.findIndex(s => s.playerId === pid);
-        const curPos = slotIdx !== -1 ? gm.lineup[slotIdx].pos : '替補退場';
-        const historyStr = (st.posHistory || []).join(' → ') || curPos;
+        const historyStr = (st.posHistory || []).join(' → ') || (slotIdx !== -1 ? gm.lineup[slotIdx].pos : '替補');
         return `
-          <tr class="hover:bg-slate-800/40">
+          <tr>
             <td class="p-2 font-bold text-amber-400">${slotIdx !== -1 ? `第 ${slotIdx + 1} 棒` : '替補'}</td>
             <td class="p-2 font-bold text-white">#${p.number} ${p.name}</td>
             <td class="p-2"><span class="px-2 py-0.5 rounded bg-slate-800 text-emerald-300 font-bold">${historyStr}</span></td>
-            ${bFields.map(f => `
-              <td class="p-1 text-center">
-                <input type="number" min="0" value="${num(st[f])}" onchange="updateGameBatterStat('${pid}','${f}',this.value)"
-                  class="w-11 text-center bg-slate-900 border border-slate-700 rounded py-1 text-white" />
-              </td>
-            `).join('')}
+            ${bFields.map(f => `<td class="p-1 text-center"><input type="number" min="0" value="${num(st[f])}" onchange="updateGameBatterStat('${pid}','${f}',this.value)" class="w-11 text-center bg-slate-900 border border-slate-700 rounded py-1 text-white" /></td>`).join('')}
           </tr>
         `;
       }).join('');
@@ -1728,13 +1721,8 @@
         const st = gm.pitcherStats[pid];
         return `
           <tr>
-            <td class="p-2 font-bold text-white">#${p.number} ${p.name} ${gm.currentPitcherId === pid ? '<span class="text-[10px] bg-rose-600 text-white px-1.5 py-0.5 rounded ml-1">目前投手</span>' : ''}</td>
-            ${pFields.map(f => `
-              <td class="p-1 text-center">
-                <input type="number" ${f === 'ip' ? 'step="0.1"' : ''} min="0" value="${num(st[f])}" onchange="updateGamePitcherStat('${pid}','${f}',this.value)"
-                  class="w-14 text-center bg-slate-900 border border-slate-700 rounded py-1 text-white" />
-              </td>
-            `).join('')}
+            <td class="p-2 font-bold text-white">#${p.number} ${p.name}</td>
+            ${pFields.map(f => `<td class="p-1 text-center"><input type="number" ${f === 'ip' ? 'step="0.1"' : ''} min="0" value="${num(st[f])}" onchange="updateGamePitcherStat('${pid}','${f}',this.value)" class="w-14 text-center bg-slate-900 border border-slate-700 rounded py-1 text-white" /></td>`).join('')}
           </tr>
         `;
       }).join('');
@@ -1742,10 +1730,9 @@
       const logBox = document.getElementById('gameSubLogList');
       logBox.innerHTML = (gm.subLogs && gm.subLogs.length > 0)
         ? gm.subLogs.map(l => `<div class="p-2 rounded bg-slate-900 border border-slate-800 text-slate-300">${l}</div>`).join('')
-        : '<div class="text-slate-500 p-2">尚無局數換人或守備異動紀錄</div>';
+        : '<div class="text-slate-500 p-2">尚無異動紀錄</div>';
     }
 
-    // ==================== 匯出 / 匯入 / 清空 ====================
     window.exportDataJSON = function() {
       const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
@@ -1755,6 +1742,7 @@
     };
 
     window.importDataJSON = function(e) {
+      if (!canModifyData()) return;
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
@@ -1764,7 +1752,7 @@
           if (Array.isArray(parsed.players)) {
             state = { ...state, ...parsed };
             saveState();
-            showToast('成功匯入雲科棒球隊資料！');
+            showToast('成功匯入並同步至雲端！');
           }
         } catch (err) { showToast('JSON 格式錯誤', 'error'); }
       };
@@ -1772,25 +1760,27 @@
     };
 
     window.clearAllSystemData = function() {
+      if (!canModifyData()) return;
       if (!confirm('確定要清空所有球員與比賽紀錄嗎？')) return;
-      localStorage.removeItem(STORAGE_KEY);
       state.players = [];
       state.games = [];
       state.activeGameId = null;
       clearLineup();
       saveState();
-      showToast('已清空所有系統資料');
     };
 
     function renderAll() {
+      updateAuthButtons();
       renderSummaryBar();
       renderRoster();
       renderTactics();
       renderGamesView();
     }
 
-    loadState();
+    // 啟動：先載入本機快取，再自動連接 Firebase 雲端
+    loadLocalFallback();
     renderAll();
+    initFirebaseCloud();
   </script>
 </body>
 </html>
