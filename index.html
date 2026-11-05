@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>2026 雲科棒球隊 - 球員資料庫與比賽管理系統 (雲端即時版)</title>
+  <title>2026 雲科棒球隊 - 球員資料庫與比賽管理系統</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
   <!-- Firebase SDK -->
@@ -58,7 +58,7 @@
         <div>
           <div class="flex items-center gap-2">
             <h1 class="text-lg md:text-xl font-black tracking-wide text-white">雲科棒球隊 球員資料庫系統</h1>
-            <span id="cloudStatusBadge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400">本機模式</span>
+            <span id="cloudStatusBadge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400">連線中...</span>
           </div>
           <p class="text-xs text-slate-400">National Yunlin University of Science and Technology Baseball</p>
         </div>
@@ -79,9 +79,9 @@
           <i class="fa-solid fa-user-plus mr-1"></i>新增球員
         </button>
 
-        <!-- 雲端管理員登入按鈕 -->
+        <!-- 管理員登入按鈕 -->
         <button id="authBtn" onclick="openCloudAuthModal()" class="px-3.5 py-2 rounded-lg text-sm font-bold bg-sky-600 hover:bg-sky-500 text-white shadow">
-          <i class="fa-solid fa-cloud-arrow-up mr-1"></i>管理員登入 / 雲端設定
+          <i class="fa-solid fa-user-lock mr-1"></i>管理員登入
         </button>
 
         <button onclick="exportDataJSON()" title="匯出備份" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300">
@@ -168,7 +168,7 @@
       <div id="emptyRosterBox" class="hidden glass rounded-2xl p-12 text-center space-y-4">
         <div class="text-5xl text-emerald-400"><i class="fa-solid fa-baseball"></i></div>
         <h3 class="text-xl font-bold text-white">目前雲科棒球隊資料庫尚無球員</h3>
-        <p class="text-sm text-slate-400 max-w-md mx-auto">點擊下方按鈕新增第一位球員，若已設定 Firebase 雲端連線，所有隊員打開網址都能即時看到最新數據！</p>
+        <p class="text-sm text-slate-400 max-w-md mx-auto">點擊下方按鈕新增第一位球員，登入管理員後所有修改都會即時同步給全隊！</p>
         <button onclick="openPlayerFormModal('add')" class="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm">
           <i class="fa-solid fa-plus mr-1"></i>立即新增第一位雲科球員
         </button>
@@ -402,45 +402,37 @@
     </section>
   </main>
 
-  <!-- ==================== 視窗 0：Firebase 雲端管理員登入 Modal ==================== -->
-  <div id="cloudAuthModal" class="fixed inset-0 bg-black/75 z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
-    <div class="glass bg-slate-900 rounded-2xl max-w-lg w-full p-6 space-y-4 border border-slate-700">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-2">
-        <h3 class="text-base font-black text-white"><i class="fa-solid fa-cloud text-sky-400 mr-1.5"></i>雲科棒球隊 雲端資料庫與管理員登入</h3>
-        <button onclick="closeCloudAuthModal()" class="text-slate-400 hover:text-white text-xl">&times;</button>
+  <!-- ==================== 視窗 0：純淨版管理員登入介面 Modal ==================== -->
+  <div id="cloudAuthModal" class="fixed inset-0 bg-black/75 z-50 hidden flex items-center justify-center p-4">
+    <div class="glass bg-slate-900 rounded-2xl max-w-sm w-full p-6 space-y-5 border border-slate-700 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-base font-black text-white">
+          <i class="fa-solid fa-user-lock text-sky-400 mr-2"></i>管理員登入
+        </h3>
+        <button onclick="closeCloudAuthModal()" class="text-slate-400 hover:text-white text-xl leading-none">&times;</button>
       </div>
 
-      <div class="space-y-3 text-xs">
-        <div class="bg-slate-950/90 p-3 rounded-xl border border-slate-800 space-y-2">
-          <div class="flex items-center justify-between">
-            <label class="font-bold text-emerald-400">步驟 1：Firebase 連線設定 (JSON 或物件內容)</label>
-            <button onclick="saveFirebaseConfigFromUI()" class="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-bold">儲存並連線</button>
-          </div>
-          <textarea id="fb-config-input" rows="4" placeholder='貼上你的 firebaseConfig，例如：{"apiKey":"...","projectId":"yuntech-baseball",...}' class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-slate-200 font-mono text-[11px]"></textarea>
-          <p class="text-[11px] text-slate-400">💡 若你已經把 `firebaseConfig` 寫在程式碼第 392 行，這裡會自動帶入，全隊打開網址都會自動連上雲端！</p>
+      <div class="space-y-4 text-sm">
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">管理員信箱 (Email)</label>
+          <input id="login-email" type="email" placeholder="wangyongli0904@gmail.com"
+            class="w-full bg-slate-950 border border-slate-700 focus:border-sky-500 focus:outline-none rounded-xl px-3.5 py-2.5 text-white" />
         </div>
+        <div>
+          <label class="text-xs text-slate-400 block mb-1">密碼 (Password)</label>
+          <input id="login-password" type="password" placeholder="••••••••"
+            onkeydown="if(event.key==='Enter') handleFirebaseLogin()"
+            class="w-full bg-slate-950 border border-slate-700 focus:border-sky-500 focus:outline-none rounded-xl px-3.5 py-2.5 text-white" />
+        </div>
+      </div>
 
-        <div class="bg-slate-950/90 p-3 rounded-xl border border-slate-800 space-y-3">
-          <label class="font-bold text-amber-400 block">步驟 2：管理員帳號登入（登入後才可修改雲端資料）</label>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <div>
-              <label class="text-slate-400">管理員信箱 (Email)</label>
-              <input id="login-email" type="email" placeholder="wangyongli0904@gmail.com" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white" />
-            </div>
-            <div>
-              <label class="text-slate-400">密碼 (Password)</label>
-              <input id="login-password" type="password" placeholder="••••••••" class="w-full mt-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white" />
-            </div>
-          </div>
-          <div class="flex justify-between items-center pt-1">
-            <button onclick="pushLocalToCloudNow()" class="px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-300 font-bold">
-              <i class="fa-solid fa-upload mr-1"></i>將目前本機資料強制覆蓋上雲端
-            </button>
-            <button onclick="handleFirebaseLogin()" class="px-5 py-2 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-black">
-              登入管理員
-            </button>
-          </div>
-        </div>
+      <div class="space-y-2 pt-1">
+        <button onclick="handleFirebaseLogin()" class="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-black shadow-lg transition">
+          登入管理員
+        </button>
+        <button onclick="closeCloudAuthModal()" class="w-full py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition">
+          取消
+        </button>
       </div>
     </div>
   </div>
@@ -589,20 +581,17 @@
 
   <div id="toastBox" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
 
-  <!-- ==================== 完整 JavaScript + Firebase 即時雲端同步 ==================== -->
+  <!-- ==================== 完整 JavaScript + 內建雲科棒球隊 Firebase 雲端 ==================== -->
   <script>
-    // ★ 請將你在 Firebase 複製的設定貼在下方大括號內 (貼好推上 GitHub 後，全隊打開網址就會自動連上雲端)
+    // 已直接內建你的 yuntechbaseball-b1cf1 雲端資料庫設定
     const DEFAULT_FIREBASE_CONFIG = {
       apiKey: "AIzaSyByQPVgiB3PpS4ANtjGzry0dkBbe49EY7Y",
       authDomain: "yuntechbaseball-b1cf1.firebaseapp.com",
       projectId: "yuntechbaseball-b1cf1",
-      storageBucket: "yuntechbaseball-b1cf1.firebasestorage.app",
-      messagingSenderId: "246491206941",
-      appId: "1:246491206941:web:c84238f87ef930f9253df4"
+      storageBucket: "yuntechbaseball-b1cf1.firebasestorage.app"
     };
 
     const STORAGE_KEY = 'YUNTECH_BASEBALL_2026_V5';
-    const FB_CONFIG_STORAGE_KEY = 'YUNTECH_FB_CONFIG_2026';
     const ALL_POSITIONS = ['P', 'C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH', 'TWP'];
     const LINEUP_9_POS = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH', 'P'];
     const FIELD_8_POS = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF'];
@@ -645,43 +634,34 @@
       el.className = `${bg} text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow-lg transition-all`;
       el.textContent = msg;
       box.appendChild(el);
-      setTimeout(() => el.remove(), 2800);
+      setTimeout(() => el.remove(), 3200);
     }
 
     // ==================== Firebase 初始化與即時同步 ====================
-    function getEffectiveFirebaseConfig() {
-      if (DEFAULT_FIREBASE_CONFIG && DEFAULT_FIREBASE_CONFIG.apiKey && DEFAULT_FIREBASE_CONFIG.projectId) {
-        return DEFAULT_FIREBASE_CONFIG;
-      }
-      try {
-        const saved = localStorage.getItem(FB_CONFIG_STORAGE_KEY);
-        if (saved) return JSON.parse(saved);
-      } catch (e) {}
-      return null;
-    }
-
     function initFirebaseCloud() {
-      const cfg = getEffectiveFirebaseConfig();
       const badge = document.getElementById('cloudStatusBadge');
-      if (!cfg || !cfg.apiKey || !cfg.projectId) {
-        badge.textContent = '本機模式 (未綁定雲端)';
-        badge.className = 'px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400';
-        return;
-      }
-
       try {
         if (!firebase.apps.length) {
-          firebase.initializeApp(cfg);
+          firebase.initializeApp(DEFAULT_FIREBASE_CONFIG);
         }
         auth = firebase.auth();
         db = firebase.firestore();
 
-        auth.onAuthStateChanged(user => {
+        auth.onAuthStateChanged(async user => {
           currentUser = user;
           updateAuthButtons();
+          // 若剛登入且雲端還是空的，而本機已經有那 24 位球員，自動把本機球員同步上雲端！
+          if (user && db) {
+            try {
+              const snap = await db.collection('yuntech_baseball').doc('team_state_2026').get();
+              if (!snap.exists && state.players.length > 0) {
+                await saveState();
+                showToast('已自動將本機球員名單同步備份至雲端！');
+              }
+            } catch (e) {}
+          }
         });
 
-        // 即時監聽雲端資料庫變更：只要球經或管理員一改資料，所有人的畫面立刻自動更新！
         db.collection('yuntech_baseball').doc('team_state_2026').onSnapshot(doc => {
           isCloudConnected = true;
           badge.textContent = '🟢 雲端即時同步中';
@@ -712,23 +692,22 @@
       const hint = document.getElementById('roleHintText');
       if (currentUser) {
         btn.innerHTML = `<i class="fa-solid fa-right-from-bracket mr-1"></i>登出 (${currentUser.email.split('@')[0]})`;
-        btn.className = 'px-3.5 py-2 rounded-lg text-sm font-bold bg-emerald-800 hover:bg-rose-700 text-white shadow';
+        btn.className = 'px-3.5 py-2 rounded-lg text-sm font-bold bg-emerald-700 hover:bg-rose-700 text-white shadow';
         btn.onclick = () => { auth.signOut(); showToast('已登出管理員帳號'); };
-        hint.textContent = `管理員已登入：可編輯雲端資料`;
+        hint.textContent = `管理員模式 (${currentUser.email.split('@')[0]})`;
         hint.className = 'text-xs text-emerald-400 font-bold mt-1';
       } else {
-        btn.innerHTML = `<i class="fa-solid fa-cloud-arrow-up mr-1"></i>管理員登入 / 雲端設定`;
+        btn.innerHTML = `<i class="fa-solid fa-user-lock mr-1"></i>管理員登入`;
         btn.className = 'px-3.5 py-2 rounded-lg text-sm font-bold bg-sky-600 hover:bg-sky-500 text-white shadow';
         btn.onclick = openCloudAuthModal;
-        hint.textContent = isCloudConnected ? '雲端唯讀模式 (登入後可修改)' : '本機儲存模式';
+        hint.textContent = '雲端唯讀模式 (登入後可修改)';
         hint.className = 'text-xs text-amber-400 mt-1';
       }
     }
 
     function canModifyData() {
-      // 如果已經連上 Firebase 雲端，必須登入管理員才允許修改，防止隊友或路人誤刪資料！
       if (isCloudConnected && !currentUser) {
-        showToast('目前已開啟雲端同步，請先點擊右上角「管理員登入」才能修改資料！', 'error');
+        showToast('請先點選「管理員登入」才能新增或修改資料！', 'error');
         openCloudAuthModal();
         return false;
       }
@@ -736,58 +715,46 @@
     }
 
     window.openCloudAuthModal = function() {
-      const cfg = getEffectiveFirebaseConfig();
-      if (cfg) {
-        document.getElementById('fb-config-input').value = JSON.stringify(cfg, null, 2);
-      }
       document.getElementById('cloudAuthModal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('login-email').focus(), 50);
     };
 
     window.closeCloudAuthModal = function() {
       document.getElementById('cloudAuthModal').classList.add('hidden');
     };
 
-    window.saveFirebaseConfigFromUI = function() {
-      let raw = document.getElementById('fb-config-input').value.trim();
-      // 支援直接貼上 const firebaseConfig = { ... };
-      raw = raw.replace(/^[^{]*({[\s\S]*})[^}]*$/, '$1');
-      // 將未加雙引號的 key 轉為合法 JSON
-      raw = raw.replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":');
-      try {
-        const parsed = JSON.parse(raw);
-        if (!parsed.apiKey || !parsed.projectId) throw new Error('缺少 apiKey 或 projectId');
-        localStorage.setItem(FB_CONFIG_STORAGE_KEY, JSON.stringify(parsed));
-        showToast('成功儲存 Firebase 設定！正在連線雲端...');
-        initFirebaseCloud();
-      } catch (e) {
-        showToast('格式錯誤：請貼上包含 apiKey 與 projectId 的設定物件', 'error');
-      }
-    };
-
     window.handleFirebaseLogin = async function() {
       if (!auth) {
-        showToast('請先在上方貼上並儲存 Firebase 設定！', 'error');
+        showToast('雲端服務尚未初始化完成', 'error');
         return;
       }
       const email = document.getElementById('login-email').value.trim();
       const pwd = document.getElementById('login-password').value;
+      if (!email || !pwd) {
+        showToast('請輸入管理員信箱與密碼！', 'error');
+        return;
+      }
       try {
         await auth.signInWithEmailAndPassword(email, pwd);
         closeCloudAuthModal();
-        showToast('管理員登入成功！現在修改會即時同步給全隊');
+        showToast('管理員登入成功！');
       } catch (err) {
-        showToast('登入失敗：請檢查帳號密碼是否已在 Firebase Authentication 建立', 'error');
+        // 若該帳號尚未在 Firebase Authentication 建立，自動為首次登入的管理員註冊
+        if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+          try {
+            await auth.createUserWithEmailAndPassword(email, pwd);
+            closeCloudAuthModal();
+            showToast('已自動建立管理員帳號並完成登入！');
+            return;
+          } catch (regErr) {
+            if (regErr.code === 'auth/operation-not-allowed') {
+              showToast('請先到 Firebase 後台 Authentication 開啟 Email/Password 登入功能！', 'error');
+              return;
+            }
+          }
+        }
+        showToast('登入失敗：帳號或密碼錯誤 (' + (err.code || '') + ')', 'error');
       }
-    };
-
-    window.pushLocalToCloudNow = async function() {
-      if (!db || !currentUser) {
-        showToast('請先連線並登入管理員帳號！', 'error');
-        return;
-      }
-      await saveState();
-      showToast('已將目前畫面上的球員與比賽紀錄同步至雲端！');
-      closeCloudAuthModal();
     };
 
     // ==================== 防分身與狀態儲存 ====================
@@ -1480,7 +1447,7 @@
       if (!opp) { showToast('請輸入對手名稱！', 'error'); return; }
       const newGame = {
         id: 'gm_' + Date.now(),
-        date: document.getElementById('ng-date').value || '2026-11-04',
+        date: document.getElementById('ng-date').value || '2026-11-05',
         opponent: opp,
         tournament: document.getElementById('ng-tournament').value.trim() || 'UBL 大專棒球聯賽',
         ourScores: [0,0,0,0,0,0,0,0,0],
@@ -1777,7 +1744,6 @@
       renderGamesView();
     }
 
-    // 啟動：先載入本機快取，再自動連接 Firebase 雲端
     loadLocalFallback();
     renderAll();
     initFirebaseCloud();
