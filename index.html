@@ -448,11 +448,11 @@
       <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
         <div>
           <label class="text-xs text-slate-400">球員姓名 *</label>
-          <input id="pf-name" type="text" placeholder="例：王湧立" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+          <input id="pf-name" type="text"  class="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
         </div>
         <div>
           <label class="text-xs text-slate-400">背號 (#) *</label>
-          <input id="pf-number" type="number" min="0" max="99" placeholder="例：2" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+          <input id="pf-number" type="number" min="0" max="99"  class="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
         </div>
         <div>
           <label class="text-xs text-slate-400">投球習慣</label>
@@ -561,7 +561,7 @@
         </div>
         <div>
           <label class="text-xs text-slate-400">對手學校 / 球隊名稱 *</label>
-          <input id="ng-opponent" type="text" placeholder="例：虎尾科大" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+          <input id="ng-opponent" type="text"  class="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
         </div>
         <div>
           <label class="text-xs text-slate-400">盃賽 / 聯賽名稱</label>
@@ -694,7 +694,7 @@
         btn.innerHTML = `<i class="fa-solid fa-right-from-bracket mr-1"></i>登出 (${currentUser.email.split('@')[0]})`;
         btn.className = 'px-3.5 py-2 rounded-lg text-sm font-bold bg-emerald-700 hover:bg-rose-700 text-white shadow';
         btn.onclick = () => { auth.signOut(); showToast('已登出管理員帳號'); };
-        hint.textContent = `管理員模式 (${currentUser.email.split('@')[0]})`;
+        
         hint.className = 'text-xs text-emerald-400 font-bold mt-1';
       } else {
         btn.innerHTML = `<i class="fa-solid fa-user-lock mr-1"></i>管理員登入`;
