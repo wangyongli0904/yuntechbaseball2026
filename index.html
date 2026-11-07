@@ -124,7 +124,7 @@
       </div>
     </section>
 
-    <!-- 分頁 1：球員資料庫 -->
+    <!-- ==================== 分頁 1：球員資料庫 ==================== -->
     <section id="view-roster" class="space-y-4">
       <div class="glass rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-2 flex-1">
@@ -216,7 +216,7 @@
       </div>
     </section>
 
-    <!-- 分頁 2：守備與先發打序 -->
+    <!-- ==================== 分頁 2：守備與先發打序 (支援自由增減棒次) ==================== -->
     <section id="view-tactics" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
       <div class="lg:col-span-5 glass rounded-2xl p-5 flex flex-col justify-between">
         <div>
@@ -231,24 +231,32 @@
           </div>
         </div>
         <div class="text-xs text-slate-400 bg-slate-900/70 rounded-xl p-3 border border-slate-800 space-y-1">
-          <div>💡 <b>防分身與守位唯一規則：</b></div>
+          <div>💡 <b>防分身與自由棒次規則：</b></div>
           <div>1. 球場上 9 個守位（含投手 `P`）<b>絕對不會出現同一個人守兩個位置</b>。</div>
-          <div>2. 1~9 棒打擊序中<b>人員與守位皆不可重複</b>。</div>
+          <div>2. 可點擊右側「＋新增棒次 / －減少棒次」自由調整打擊人數（如 10 棒、11 棒或全員打擊制，第 10 棒起可以 `DH/自由打擊` 排入）。</div>
         </div>
       </div>
 
       <div class="lg:col-span-7 glass rounded-2xl p-5 space-y-4">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 class="text-base font-black text-white"><i class="fa-solid fa-list-ol text-amber-400 mr-1.5"></i>先發 1 ~ 9 棒打序表 (人員 & 守位唯一檢核)</h2>
-            <p class="text-xs text-slate-400">支援多守位即時切換與棒次上下調整</p>
+            <h2 class="text-base font-black text-white">
+              <i class="fa-solid fa-list-ol text-amber-400 mr-1.5"></i>先發打序表 (目前共 <span id="lineupCountLabel" class="text-amber-400">9</span> 棒)
+            </h2>
+            <p class="text-xs text-slate-400">支援自由增減打擊棒次（第 10 棒起可排入額外 DH / 自由打者）</p>
           </div>
-          <div class="flex gap-2">
+          <div class="flex flex-wrap gap-1.5">
+            <button onclick="changeLineupSize(1)" class="px-2.5 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold">
+              <i class="fa-solid fa-plus mr-1"></i>新增棒次
+            </button>
+            <button onclick="changeLineupSize(-1)" class="px-2.5 py-1.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold">
+              <i class="fa-solid fa-minus mr-1"></i>減少棒次
+            </button>
             <button onclick="autoGenerateLineup()" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">
-              <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>一鍵最佳排陣
+              <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>一鍵排陣
             </button>
             <button onclick="clearLineup()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold">
-              清空打序與球場
+              清空
             </button>
           </div>
         </div>
@@ -257,7 +265,7 @@
       </div>
     </section>
 
-    <!-- 分頁 3：單場比賽與局數中守備替換 -->
+    <!-- ==================== 分頁 3：單場比賽與局數中守備替換 ==================== -->
     <section id="view-games" class="hidden space-y-6">
       <div class="glass rounded-2xl p-5 flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-3">
@@ -329,7 +337,7 @@
                 </select>
               </div>
               <div id="subSlotBox">
-                <label class="text-slate-400 block mb-1">目標棒次 (1~9棒)</label>
+                <label class="text-slate-400 block mb-1">目標棒次</label>
                 <select id="subTargetSlot" onchange="updateSubModalUI()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"></select>
               </div>
             </div>
@@ -352,9 +360,11 @@
         </div>
 
         <div class="glass rounded-2xl p-4 space-y-3 overflow-x-auto">
-          <div class="flex items-center justify-between">
+          <div class="flex flex-wrap items-center justify-between gap-2">
             <h3 class="text-sm font-black text-white"><i class="fa-solid fa-baseball-bat-ball text-emerald-400 mr-1.5"></i>本場打擊與守位即時紀錄表</h3>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="changeGameLineupSize(1)" class="px-2.5 py-1 rounded-lg bg-sky-700 hover:bg-sky-600 text-xs text-white font-bold">+ 擴充本場棒次</button>
+              <button onclick="changeGameLineupSize(-1)" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 font-bold">- 減少棒次</button>
               <select id="addBatterToGameSelect" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white"></select>
               <button onclick="manualAddBatterToGame()" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-emerald-400 font-bold">+ 新增出賽野手</button>
             </div>
@@ -448,11 +458,11 @@
       <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-sm">
         <div>
           <label class="text-xs text-slate-400">球員姓名 *</label>
-          <input id="pf-name" type="text"  class="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+          <input id="pf-name" type="text" placeholder="例：王湧立" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
         </div>
         <div>
           <label class="text-xs text-slate-400">背號 (#) *</label>
-          <input id="pf-number" type="number" min="0" max="99"  class="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+          <input id="pf-number" type="number" min="0" max="99" placeholder="例：2" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
         </div>
         <div>
           <label class="text-xs text-slate-400">投球習慣</label>
@@ -561,7 +571,7 @@
         </div>
         <div>
           <label class="text-xs text-slate-400">對手學校 / 球隊名稱 *</label>
-          <input id="ng-opponent" type="text"  class="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
+          <input id="ng-opponent" type="text" placeholder="例：虎尾科大" class="w-full mt-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white" />
         </div>
         <div>
           <label class="text-xs text-slate-400">盃賽 / 聯賽名稱</label>
@@ -569,7 +579,7 @@
         </div>
         <div class="flex items-center gap-2 pt-1">
           <input id="ng-copyLineup" type="checkbox" checked class="rounded" />
-          <label for="ng-copyLineup" class="text-xs text-slate-300">自動帶入目前戰術盤的 1~9 棒先發與投手</label>
+          <label for="ng-copyLineup" class="text-xs text-slate-300">自動帶入目前戰術盤的所有先發打序與投手</label>
         </div>
       </div>
       <div class="flex justify-end gap-2 pt-2">
@@ -581,9 +591,9 @@
 
   <div id="toastBox" class="fixed bottom-5 right-5 z-50 space-y-2"></div>
 
-  <!-- ==================== 完整 JavaScript + 內建雲科棒球隊 Firebase 雲端 ==================== -->
+  <!-- ==================== 完整 JavaScript + Firebase 雲端 + 自由增減棒次 ==================== -->
   <script>
-    // 已直接內建你的 yuntechbaseball-b1cf1 雲端資料庫設定
+    // 內建你的 yuntechbaseball-b1cf1 雲端資料庫設定
     const DEFAULT_FIREBASE_CONFIG = {
       apiKey: "AIzaSyByQPVgiB3PpS4ANtjGzry0dkBbe49EY7Y",
       authDomain: "yuntechbaseball-b1cf1.firebaseapp.com",
@@ -650,7 +660,6 @@
         auth.onAuthStateChanged(async user => {
           currentUser = user;
           updateAuthButtons();
-          // 若剛登入且雲端還是空的，而本機已經有那 24 位球員，自動把本機球員同步上雲端！
           if (user && db) {
             try {
               const snap = await db.collection('yuntech_baseball').doc('team_state_2026').get();
@@ -670,7 +679,7 @@
             const data = doc.data();
             state.players = Array.isArray(data.players) ? data.players : [];
             if (data.fieldAssignments) state.fieldAssignments = data.fieldAssignments;
-            if (Array.isArray(data.battingOrder) && data.battingOrder.length === 9) state.battingOrder = data.battingOrder;
+            if (Array.isArray(data.battingOrder) && data.battingOrder.length >= 1) state.battingOrder = data.battingOrder;
             if (Array.isArray(data.games)) state.games = data.games;
             state.activeGameId = data.activeGameId || (state.games[0]?.id ?? null);
             enforceNoDuplicatePlayers();
@@ -694,7 +703,7 @@
         btn.innerHTML = `<i class="fa-solid fa-right-from-bracket mr-1"></i>登出 (${currentUser.email.split('@')[0]})`;
         btn.className = 'px-3.5 py-2 rounded-lg text-sm font-bold bg-emerald-700 hover:bg-rose-700 text-white shadow';
         btn.onclick = () => { auth.signOut(); showToast('已登出管理員帳號'); };
-        
+        hint.textContent = `管理員模式 (${currentUser.email.split('@')[0]})`;
         hint.className = 'text-xs text-emerald-400 font-bold mt-1';
       } else {
         btn.innerHTML = `<i class="fa-solid fa-user-lock mr-1"></i>管理員登入`;
@@ -739,7 +748,6 @@
         closeCloudAuthModal();
         showToast('管理員登入成功！');
       } catch (err) {
-        // 若該帳號尚未在 Firebase Authentication 建立，自動為首次登入的管理員註冊
         if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
           try {
             await auth.createUserWithEmailAndPassword(email, pwd);
@@ -757,25 +765,31 @@
       }
     };
 
-    // ==================== 防分身與狀態儲存 ====================
+    // ==================== 防分身與狀態儲存 (支援第 10 棒以上多個 DH) ====================
     function enforceNoDuplicatePlayers() {
       const validIds = new Set(state.players.map(p => p.id));
       const seenBatterIds = new Set();
-      const seenPosGroups = new Set();
+      const seenFieldPos = new Set();
 
+      if (!Array.isArray(state.battingOrder) || state.battingOrder.length < 1) {
+        state.battingOrder = Array.from({ length: 9 }, () => ({ playerId: null, pos: null }));
+      }
+
+      // 1. 確保打序不會有重複球員；場上 8 個守位與 P 唯一，但允許有多個 DH (第 10 棒以上增額打擊)
       state.battingOrder.forEach(slot => {
         if (!slot.playerId || !validIds.has(slot.playerId) || !slot.pos) {
           slot.playerId = null; slot.pos = null; return;
         }
-        const grp = (slot.pos === 'DH' || slot.pos === 'P') ? 'DH_OR_P' : slot.pos;
-        if (seenBatterIds.has(slot.playerId) || seenPosGroups.has(grp)) {
+        const isDH = (slot.pos === 'DH');
+        if (seenBatterIds.has(slot.playerId) || (!isDH && seenFieldPos.has(slot.pos))) {
           slot.playerId = null; slot.pos = null;
         } else {
           seenBatterIds.add(slot.playerId);
-          seenPosGroups.add(grp);
+          if (!isDH) seenFieldPos.add(slot.pos);
         }
       });
 
+      // 2. 檢查先發投手 P 是否已去守 8 大野手位置
       let currentPitcher = state.fieldAssignments.P;
       if (currentPitcher && !validIds.has(currentPitcher)) currentPitcher = null;
       if (currentPitcher) {
@@ -790,7 +804,14 @@
         P: currentPitcher, C: null, '1B': null, '2B': null, '3B': null, SS: null, LF: null, CF: null, RF: null, DH: null
       };
       state.battingOrder.forEach(slot => {
-        if (slot.playerId && slot.pos) state.fieldAssignments[slot.pos] = slot.playerId;
+        if (slot.playerId && slot.pos) {
+          // 若有多個 DH，球場上的 DH 節點顯示第一位排入的 DH
+          if (slot.pos === 'DH') {
+            if (!state.fieldAssignments.DH) state.fieldAssignments.DH = slot.playerId;
+          } else {
+            state.fieldAssignments[slot.pos] = slot.playerId;
+          }
+        }
       });
     }
 
@@ -824,7 +845,7 @@
           const parsed = JSON.parse(raw);
           state.players = Array.isArray(parsed.players) ? parsed.players : [];
           if (parsed.fieldAssignments) state.fieldAssignments = parsed.fieldAssignments;
-          if (Array.isArray(parsed.battingOrder) && parsed.battingOrder.length === 9) state.battingOrder = parsed.battingOrder;
+          if (Array.isArray(parsed.battingOrder) && parsed.battingOrder.length >= 1) state.battingOrder = parsed.battingOrder;
           if (Array.isArray(parsed.games)) state.games = parsed.games;
           state.activeGameId = parsed.activeGameId || (state.games[0]?.id ?? null);
         }
@@ -1207,11 +1228,14 @@
       showToast('已刪除球員');
     };
 
-    // ==================== 戰術盤與 1~9 棒打序 ====================
+    // ==================== 戰術盤與自由棒次打序 ====================
     function normalizePosGroup(pos) { return (pos === 'DH' || pos === 'P') ? 'DH_OR_P' : pos; }
 
     function renderTactics() {
       enforceNoDuplicatePlayers();
+      const countLabel = document.getElementById('lineupCountLabel');
+      if (countLabel) countLabel.textContent = state.battingOrder.length;
+
       const nodesBox = document.getElementById('fieldNodesBox');
       const fieldPosList = ['LF', 'CF', 'RF', 'SS', '2B', '3B', '1B', 'P', 'C', 'DH'];
       nodesBox.innerHTML = fieldPosList.map(pos => {
@@ -1240,7 +1264,7 @@
       orderBox.innerHTML = state.battingOrder.map((slot, i) => {
         const p = state.players.find(x => x.id === slot.playerId);
         const s = p ? getPlayerCombinedStats(p) : null;
-        const posList = p ? (p.positions || ['C']).filter(x => x !== 'TWP') : [];
+        const posList = p ? Array.from(new Set([...(p.positions || ['C']).filter(x => x !== 'TWP'), 'DH'])) : [];
         return `
           <div class="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900/85 border border-slate-800">
             <div class="flex items-center gap-3">
@@ -1259,12 +1283,28 @@
       }).join('');
     }
 
+    // 自由增減場上打擊棒次 (最少 1 棒，無上限)
+    window.changeLineupSize = function(delta) {
+      if (!canModifyData()) return;
+      if (delta > 0) {
+        state.battingOrder.push({ playerId: null, pos: null });
+        showToast(`已新增第 ${state.battingOrder.length} 棒！`);
+      } else if (delta < 0) {
+        if (state.battingOrder.length <= 1) {
+          showToast('打序至少要保留 1 棒！', 'error');
+          return;
+        }
+        state.battingOrder.pop();
+        showToast(`已縮減為 ${state.battingOrder.length} 棒`);
+      }
+      saveState();
+    };
+
     window.switchBatterPosInLineup = function(slotIdx, targetPos) {
       if (!canModifyData()) return;
       const curSlot = state.battingOrder[slotIdx];
       if (!curSlot || !curSlot.playerId) return;
-      const targetGroup = normalizePosGroup(targetPos);
-      const conflictIdx = state.battingOrder.findIndex((s, idx) => idx !== slotIdx && s.pos && normalizePosGroup(s.pos) === targetGroup);
+      const conflictIdx = (targetPos === 'DH') ? -1 : state.battingOrder.findIndex((s, idx) => idx !== slotIdx && s.pos === targetPos);
 
       if (conflictIdx === -1) {
         curSlot.pos = targetPos;
@@ -1274,7 +1314,7 @@
         const otherSlot = state.battingOrder[conflictIdx];
         const otherPlayer = state.players.find(x => x.id === otherSlot.playerId);
         const oldPos = curSlot.pos;
-        if (otherPlayer && (otherPlayer.positions || []).includes(oldPos)) {
+        if (otherPlayer && ((otherPlayer.positions || []).includes(oldPos) || oldPos === 'DH')) {
           curSlot.pos = targetPos;
           otherSlot.pos = oldPos;
           saveState();
@@ -1288,7 +1328,7 @@
     window.moveBattingSlot = function(idx, dir) {
       if (!canModifyData()) return;
       const target = idx + dir;
-      if (target < 0 || target >= 9) return;
+      if (target < 0 || target >= state.battingOrder.length) return;
       const tmp = state.battingOrder[idx];
       state.battingOrder[idx] = state.battingOrder[target];
       state.battingOrder[target] = tmp;
@@ -1298,12 +1338,14 @@
     window.openLineupSlotPicker = function(slotIdx) {
       if (!canModifyData()) return;
       const modal = document.getElementById('slotPickerModal');
-      document.getElementById('slotPickerTitle').textContent = `指派第 ${slotIdx + 1} 棒打者（人員與守位皆不可重複）`;
+      document.getElementById('slotPickerTitle').textContent = `指派第 ${slotIdx + 1} 棒打者（第 10 棒起可以 DH/自由打擊排入）`;
       const box = document.getElementById('slotPickerOptions');
 
       const usedPlayerIds = new Set(state.battingOrder.map((s, i) => i !== slotIdx ? s.playerId : null).filter(Boolean));
-      const usedGroups = new Map();
-      state.battingOrder.forEach((s, i) => { if (i !== slotIdx && s.pos) usedGroups.set(normalizePosGroup(s.pos), i + 1); });
+      const usedFieldPos = new Map();
+      state.battingOrder.forEach((s, i) => {
+        if (i !== slotIdx && s.pos && s.pos !== 'DH') usedFieldPos.set(s.pos, i + 1);
+      });
       const currentPitcherId = state.fieldAssignments.P;
 
       let html = `<button onclick="assignLineupSlot(${slotIdx}, null, null)" class="w-full text-left p-2.5 rounded-xl bg-rose-950/50 hover:bg-rose-900 text-rose-300 text-xs font-bold">清除此棒次</button>`;
@@ -1311,16 +1353,18 @@
         if (usedPlayerIds.has(p.id)) return;
         const s = getPlayerCombinedStats(p);
         const rawPos = p.positions || ['C'];
-        const candidatePos = rawPos.includes('TWP') ? Array.from(new Set([...rawPos.filter(x => x !== 'TWP'), 'P', 'DH'])) : rawPos;
+        // 讓每位球員除了自己的守位外，都能以 DH (自由打擊/增額打者) 排入
+        const candidatePos = Array.from(new Set([...rawPos.filter(x => x !== 'TWP'), 'DH']));
         const isCurrentPitcher = (currentPitcherId === p.id);
 
         const posButtons = candidatePos.map(pos => {
-          const occupiedBy = usedGroups.get(normalizePosGroup(pos));
+          const occupiedBy = (pos !== 'DH') ? usedFieldPos.get(pos) : null;
           if (occupiedBy) return `<span class="px-2 py-1 rounded bg-slate-800 text-slate-500 text-[11px]">🔒 ${pos} (${occupiedBy}棒)</span>`;
           if (isCurrentPitcher && FIELD_8_POS.includes(pos)) {
             return `<button onclick="assignLineupSlot(${slotIdx}, '${p.id}', '${pos}')" class="px-2.5 py-1 rounded bg-amber-600 text-slate-950 text-xs font-bold">從 P 移防 ${pos}</button>`;
           }
-          return `<button onclick="assignLineupSlot(${slotIdx}, '${p.id}', '${pos}')" class="px-2.5 py-1 rounded bg-emerald-600 text-white text-xs font-bold">以 ${pos} 排入</button>`;
+          const btnLabel = (pos === 'DH' && slotIdx >= 9) ? 'DH/自由打擊' : pos;
+          return `<button onclick="assignLineupSlot(${slotIdx}, '${p.id}', '${pos}')" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold">以 ${btnLabel} 排入</button>`;
         }).join(' ');
 
         html += `
@@ -1353,7 +1397,7 @@
       const modal = document.getElementById('slotPickerModal');
       document.getElementById('slotPickerTitle').textContent = `指派球場守位：${pos}`;
       const box = document.getElementById('slotPickerOptions');
-      const eligible = state.players.filter(p => (p.positions || []).includes(pos) || ((pos === 'P' || pos === 'DH') && (p.positions || []).includes('TWP')));
+      const eligible = state.players.filter(p => (p.positions || []).includes(pos) || ((pos === 'P' || pos === 'DH') && (p.positions || []).includes('TWP')) || pos === 'DH');
 
       let html = `<button onclick="clearFieldPos('${pos}')" class="w-full text-left p-2.5 rounded-xl bg-rose-950/50 text-rose-300 text-xs font-bold">清空 ${pos} 守位</button>`;
       eligible.forEach(p => {
@@ -1385,8 +1429,7 @@
         state.fieldAssignments.P = playerId;
       } else {
         if (FIELD_8_POS.includes(pos) && state.fieldAssignments.P === playerId) state.fieldAssignments.P = null;
-        const posGroup = normalizePosGroup(pos);
-        const existingPosSlotIdx = state.battingOrder.findIndex(s => s.pos && normalizePosGroup(s.pos) === posGroup);
+        const existingPosSlotIdx = state.battingOrder.findIndex(s => s.pos === pos);
         const playerCurrentSlotIdx = state.battingOrder.findIndex(s => s.playerId === playerId);
         const emptySlotIdx = state.battingOrder.findIndex(s => !s.playerId);
         if (playerCurrentSlotIdx !== -1) state.battingOrder[playerCurrentSlotIdx] = { playerId: null, pos: null };
@@ -1402,12 +1445,14 @@
     window.autoGenerateLineup = function() {
       if (!canModifyData()) return;
       if (state.players.length === 0) { showToast('請先新增球員！', 'error'); return; }
+      const targetLen = state.battingOrder.length;
       const requiredPos = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'];
       const usedIds = new Set();
       const assigned = [];
       const pitcher = state.players.find(p => (p.positions || []).includes('P') || (p.positions || []).includes('TWP'));
 
       requiredPos.forEach(pos => {
+        if (assigned.length >= targetLen) return;
         const cand = state.players.find(p => {
           if (usedIds.has(p.id)) return false;
           if (pitcher && p.id === pitcher.id && FIELD_8_POS.includes(pos)) return false;
@@ -1416,16 +1461,27 @@
         });
         if (cand) { usedIds.add(cand.id); assigned.push({ playerId: cand.id, pos }); }
       });
-      while (assigned.length < 9) assigned.push({ playerId: null, pos: null });
+
+      // 若目前設定超過 9 棒 (例如 10 棒、11 棒)，自動將剩餘球員以 DH 排入
+      while (assigned.length < targetLen) {
+        const extraCand = state.players.find(p => !usedIds.has(p.id) && (!pitcher || p.id !== pitcher.id));
+        if (extraCand) {
+          usedIds.add(extraCand.id);
+          assigned.push({ playerId: extraCand.id, pos: 'DH' });
+        } else {
+          assigned.push({ playerId: null, pos: null });
+        }
+      }
       state.battingOrder = assigned;
       state.fieldAssignments.P = pitcher ? pitcher.id : null;
       saveState();
-      showToast('已完成自動排陣！');
+      showToast(`已完成 ${targetLen} 棒自動排陣！`);
     };
 
     window.clearLineup = function() {
       if (!canModifyData()) return;
-      state.battingOrder = Array.from({ length: 9 }, () => ({ playerId: null, pos: null }));
+      const len = state.battingOrder.length;
+      state.battingOrder = Array.from({ length: len }, () => ({ playerId: null, pos: null }));
       state.fieldAssignments = { P:null, C:null, '1B':null, '2B':null, '3B':null, SS:null, LF:null, CF:null, RF:null, DH:null };
       saveState();
     };
@@ -1447,12 +1503,12 @@
       if (!opp) { showToast('請輸入對手名稱！', 'error'); return; }
       const newGame = {
         id: 'gm_' + Date.now(),
-        date: document.getElementById('ng-date').value || '2026-11-05',
+        date: document.getElementById('ng-date').value || '2026-11-07',
         opponent: opp,
         tournament: document.getElementById('ng-tournament').value.trim() || 'UBL 大專棒球聯賽',
         ourScores: [0,0,0,0,0,0,0,0,0],
         oppScores: [0,0,0,0,0,0,0,0,0],
-        lineup: Array.from({ length: 9 }, () => ({ playerId: null, pos: null })),
+        lineup: Array.from({ length: state.battingOrder.length }, () => ({ playerId: null, pos: null })),
         currentPitcherId: null,
         batterStats: {},
         pitcherStats: {},
@@ -1462,6 +1518,22 @@
       state.games.unshift(newGame);
       state.activeGameId = newGame.id;
       closeNewGameModal();
+      saveState();
+    };
+
+    // 在單場比賽中也支援直接擴充/減少該場棒次
+    window.changeGameLineupSize = function(delta) {
+      if (!canModifyData()) return;
+      const gm = getCurrentGame();
+      if (!gm) return;
+      if (!Array.isArray(gm.lineup)) gm.lineup = [];
+      if (delta > 0) {
+        gm.lineup.push({ playerId: null, pos: 'DH' });
+        showToast(`本場比賽已擴充至第 ${gm.lineup.length} 棒！`);
+      } else if (delta < 0 && gm.lineup.length > 1) {
+        gm.lineup.pop();
+        showToast(`本場比賽已縮減至 ${gm.lineup.length} 棒`);
+      }
       saveState();
     };
 
@@ -1518,7 +1590,11 @@
       const posBox = document.getElementById('subNewPosBox');
 
       const slotSel = document.getElementById('subTargetSlot');
-      if (!slotSel.innerHTML) slotSel.innerHTML = Array.from({ length: 9 }, (_, i) => `<option value="${i}">第 ${i + 1} 棒</option>`).join('');
+      const lineupLen = Math.max(1, (gm.lineup || []).length);
+      const prevVal = num(slotSel.value);
+      slotSel.innerHTML = Array.from({ length: lineupLen }, (_, i) => `<option value="${i}">第 ${i + 1} 棒</option>`).join('');
+      slotSel.value = (prevVal >= 0 && prevVal < lineupLen) ? String(prevVal) : '0';
+
       const targetSlotIdx = num(slotSel.value);
       const currentSlot = gm.lineup[targetSlotIdx] || { playerId: null, pos: null };
 
@@ -1528,7 +1604,7 @@
       } else if (type === 'POS_CHANGE') {
         slotBox.classList.remove('hidden'); playerBox.classList.add('hidden'); posBox.classList.remove('hidden');
         const p = state.players.find(x => x.id === currentSlot.playerId);
-        const posChoices = p ? (p.positions || LINEUP_9_POS) : LINEUP_9_POS;
+        const posChoices = p ? Array.from(new Set([...(p.positions || LINEUP_9_POS), 'DH'])) : LINEUP_9_POS;
         document.getElementById('subNewPosition').innerHTML = posChoices.map(pos => `<option value="${pos}">${pos}</option>`).join('');
       } else {
         slotBox.classList.remove('hidden'); playerBox.classList.remove('hidden'); posBox.classList.remove('hidden');
@@ -1559,7 +1635,7 @@
         const newPos = document.getElementById('subNewPosition').value;
         if (!p) return;
         const oldPos = cur.pos;
-        const conflictIdx = gm.lineup.findIndex((s, i) => i !== slotIdx && s.pos === newPos);
+        const conflictIdx = (newPos === 'DH') ? -1 : gm.lineup.findIndex((s, i) => i !== slotIdx && s.pos === newPos);
         cur.pos = newPos;
         ensureBatterStatRow(gm, p.id, newPos);
         if (conflictIdx !== -1) {
